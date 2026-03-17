@@ -14,7 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ordens_servico: {
+        Row: {
+          cod: string
+          created_at: string
+          custo_items: Json
+          data: string
+          fat_items: Json
+          id: string
+          nome: string
+          pgto: string
+          status: string
+          tel: string | null
+          updated_at: string
+        }
+        Insert: {
+          cod: string
+          created_at?: string
+          custo_items?: Json
+          data?: string
+          fat_items?: Json
+          id?: string
+          nome: string
+          pgto?: string
+          status?: string
+          tel?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cod?: string
+          created_at?: string
+          custo_items?: Json
+          data?: string
+          fat_items?: Json
+          id?: string
+          nome?: string
+          pgto?: string
+          status?: string
+          tel?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
