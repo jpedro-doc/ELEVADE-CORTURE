@@ -65,6 +65,30 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
     save({ ...localOS, fat_items: newFat });
   };
 
+  const addFatItem = () => {
+    const newItem: BillingItem = {
+      id: crypto.randomUUID(),
+      desc: '',
+      qty: 1,
+      unit: 0,
+      cost_unit: 0,
+      billing_manually_edited: true,
+      fat_only: true,
+    };
+    save({ ...localOS, fat_items: [...localOS.fat_items, newItem] });
+  };
+
+  const updateFatItem = (id: string, field: 'desc' | 'qty' | 'unit', value: string | number) => {
+    const newFat = localOS.fat_items.map(f =>
+      f.id === id ? { ...f, [field]: value } : f
+    );
+    save({ ...localOS, fat_items: newFat });
+  };
+
+  const removeFatItem = (id: string) => {
+    save({ ...localOS, fat_items: localOS.fat_items.filter(f => f.id !== id) });
+  };
+
   const billingTotal = calcTotal(localOS.fat_items);
   const borderColor = mode === 'custos' ? 'border-secondary' : 'border-primary';
 
@@ -226,7 +250,7 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
 
             {localOS.fat_items.length === 0 ? (
               <p className="text-xs text-muted-foreground py-4 text-center">
-                Adicione itens na aba Custos para que apareçam aqui automaticamente.
+                Adicione itens na aba Custos ou clique em "Adicionar Item" abaixo.
               </p>
             ) : (
               <div className="overflow-x-auto">
@@ -238,6 +262,7 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
                       <th className="text-right pb-2 px-2 w-28">Val. Faturamento</th>
                       <th className="text-right pb-2 pl-2 w-24">Total Fat.</th>
                       {isOwner && <th className="text-right pb-2 pl-2 w-24">Lucro</th>}
+                      <th className="w-8"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -248,21 +273,43 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
                         <tr key={item.id} className="border-b border-border/50">
                           {/* Produto */}
                           <td className="py-1.5 pr-2 text-sm">
-                            {item.desc || <span className="text-muted-foreground italic">sem descrição</span>}
+                            {item.fat_only ? (
+                              <input
+                                value={item.desc}
+                                onChange={e => updateFatItem(item.id, 'desc', e.target.value)}
+                                className="w-full bg-transparent text-sm focus:outline-none focus:bg-muted/50 rounded px-1"
+                                placeholder="Descrição do item"
+                              />
+                            ) : (
+                              item.desc || <span className="text-muted-foreground italic">sem descrição</span>
+                            )}
                           </td>
-                          {/* Qtd — sempre igual ao custo, somente leitura */}
+                          {/* Qtd */}
                           <td className="py-1.5 px-2 text-right font-mono text-sm text-muted-foreground">
-                            {item.qty}
+                            {item.fat_only ? (
+                              <input
+                                type="number"
+                                min={0}
+                                value={item.qty}
+                                onChange={e => updateFatItem(item.id, 'qty', Number(e.target.value))}
+                                className="w-full bg-transparent text-sm text-right font-mono focus:outline-none focus:bg-muted/50 rounded px-1"
+                              />
+                            ) : (
+                              item.qty
+                            )}
                           </td>
-                          {/* Val. Faturamento — editável só no modo edição */}
+                          {/* Val. Faturamento */}
                           <td className="py-1.5 px-2">
-                            {editingInfo ? (
+                            {editingInfo || item.fat_only ? (
                               <input
                                 type="number"
                                 min={0}
                                 step={0.01}
                                 value={item.unit}
-                                onChange={e => updateBillingValue(item.id, Number(e.target.value))}
+                                onChange={e => item.fat_only
+                                  ? updateFatItem(item.id, 'unit', Number(e.target.value))
+                                  : updateBillingValue(item.id, Number(e.target.value))
+                                }
                                 className="w-full bg-muted/50 border border-border/60 text-sm text-right font-mono rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary"
                               />
                             ) : (
@@ -281,6 +328,14 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
                               R$ {lucroItem.toFixed(2)}
                             </td>
                           )}
+                          {/* Remover — só itens fat_only */}
+                          <td className="py-1.5">
+                            {item.fat_only && (
+                              <button onClick={() => removeFatItem(item.id)} className="p-0.5 text-muted-foreground hover:text-destructive">
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       );
                     })}
@@ -288,6 +343,12 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
                 </table>
               </div>
             )}
+
+            <div className="flex items-center mt-3">
+              <button onClick={addFatItem} className="flex items-center gap-1 text-xs text-primary hover:opacity-80">
+                <Plus size={14} /> Adicionar Item
+              </button>
+            </div>
 
             {/* Totais */}
             {localOS.fat_items.length > 0 && (

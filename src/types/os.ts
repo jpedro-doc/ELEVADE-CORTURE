@@ -8,6 +8,7 @@ export interface CostItem {
 export interface BillingItem extends CostItem {
   cost_unit: number;
   billing_manually_edited: boolean;
+  fat_only?: boolean;
 }
 
 export interface OrdemServico {
@@ -36,7 +37,9 @@ export function calcLucro(os: OrdemServico): number {
 
 export function syncFatFromCusto(custo: CostItem[], fat: BillingItem[]): BillingItem[] {
   const fatMap = new Map(fat.map(f => [f.id, f]));
-  return custo.map(c => {
+  const custoIds = new Set(custo.map(c => c.id));
+  const fatOnlyItems = fat.filter(f => f.fat_only);
+  const synced = custo.map(c => {
     const existing = fatMap.get(c.id);
     if (!existing) {
       return {
@@ -57,4 +60,5 @@ export function syncFatFromCusto(custo: CostItem[], fat: BillingItem[]): Billing
       unit: manuallyEdited ? existing.unit : c.unit,
     };
   });
+  return [...synced, ...fatOnlyItems];
 }
