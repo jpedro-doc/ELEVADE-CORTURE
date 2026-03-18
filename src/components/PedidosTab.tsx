@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useOS } from '@/contexts/OSContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompany } from '@/contexts/CompanyContext';
 import { toast } from '@/hooks/use-toast';
 import OSCard from './OSCard';
 import { Search } from 'lucide-react';
@@ -8,6 +9,7 @@ import { Search } from 'lucide-react';
 const PedidosTab: React.FC<{ onOpenOS: (id: string, mode?: string) => void }> = ({ onOpenOS }) => {
   const { ordens, loading, addOrdem } = useOS();
   const { isOwner } = useAuth();
+  const { selectedCod } = useCompany();
   const [cod, setCod] = useState('');
   const [nome, setNome] = useState('');
   const [tel, setTel] = useState('');
@@ -17,7 +19,7 @@ const PedidosTab: React.FC<{ onOpenOS: (id: string, mode?: string) => void }> = 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cod.trim() || !nome.trim()) {
-      toast({ title: 'Preencha código e nome', variant: 'destructive' });
+      toast({ title: 'Preencha empresa e nome', variant: 'destructive' });
       return;
     }
     try {
@@ -29,6 +31,7 @@ const PedidosTab: React.FC<{ onOpenOS: (id: string, mode?: string) => void }> = 
   };
 
   const filtered = ordens.filter(o => {
+    if (selectedCod && o.cod !== selectedCod) return false;
     if (filterStatus !== 'all' && o.status !== filterStatus) return false;
     if (search) {
       const s = search.toLowerCase();
@@ -46,7 +49,7 @@ const PedidosTab: React.FC<{ onOpenOS: (id: string, mode?: string) => void }> = 
           <input
             value={cod}
             onChange={e => setCod(e.target.value.toUpperCase())}
-            placeholder="Código"
+            placeholder="Empresa"
             className="bg-muted border border-border rounded px-3 py-2 text-sm font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
           />
           <input
@@ -76,7 +79,7 @@ const PedidosTab: React.FC<{ onOpenOS: (id: string, mode?: string) => void }> = 
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por código ou nome..."
+            placeholder="Buscar por empresa ou nome..."
             className="w-full bg-muted border border-border rounded pl-9 pr-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>

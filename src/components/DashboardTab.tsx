@@ -1,22 +1,29 @@
 import React, { useMemo, useState } from 'react';
 import { useOS } from '@/contexts/OSContext';
+import { useCompany } from '@/contexts/CompanyContext';
 import { calcTotal, calcLucro } from '@/types/os';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 const DashboardTab: React.FC = () => {
   const { ordens } = useOS();
+  const { selectedCod } = useCompany();
   const [mesFilter, setMesFilter] = useState('');
 
+  const filteredOrdens = useMemo(() => {
+    if (!selectedCod) return ordens;
+    return ordens.filter(o => o.cod === selectedCod);
+  }, [ordens, selectedCod]);
+
   const stats = useMemo(() => {
-    const totalFat = ordens.reduce((s, o) => s + calcTotal(o.fat_items), 0);
-    const totalCusto = ordens.reduce((s, o) => s + calcTotal(o.custo_items), 0);
+    const totalFat = filteredOrdens.reduce((s, o) => s + calcTotal(o.fat_items), 0);
+    const totalCusto = filteredOrdens.reduce((s, o) => s + calcTotal(o.custo_items), 0);
     return {
       faturamento: totalFat,
       custo: totalCusto,
       lucro: totalFat - totalCusto,
-      count: ordens.length,
+      count: filteredOrdens.length,
     };
-  }, [ordens]);
+  }, [filteredOrdens]);
 
   const chartData = useMemo(() => {
     const now = new Date();
@@ -25,22 +32,22 @@ const DashboardTab: React.FC = () => {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const label = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-      const monthOrdens = ordens.filter(o => o.data.startsWith(key));
+      const monthOrdens = filteredOrdens.filter(o => o.data.startsWith(key));
       const custo = monthOrdens.reduce((s, o) => s + calcTotal(o.custo_items), 0);
       const faturamento = monthOrdens.reduce((s, o) => s + calcTotal(o.fat_items), 0);
       months.push({ label, key, custo, faturamento, lucro: faturamento - custo });
     }
     return months;
-  }, [ordens]);
+  }, [filteredOrdens]);
 
   const mesOptions = useMemo(() => {
     const set = new Set<string>();
-    ordens.forEach(o => { const d = o.data.substring(0, 7); set.add(d); });
+    filteredOrdens.forEach(o => { const d = o.data.substring(0, 7); set.add(d); });
     return Array.from(set).sort().reverse();
-  }, [ordens]);
+  }, [filteredOrdens]);
 
   const tableData = useMemo(() => {
-    return ordens
+    return filteredOrdens
       .filter(o => !mesFilter || o.data.startsWith(mesFilter))
       .map(o => ({
         data: new Date(o.data).toLocaleDateString('pt-BR'),
@@ -50,7 +57,7 @@ const DashboardTab: React.FC = () => {
         faturado: calcTotal(o.fat_items),
         lucro: calcLucro(o),
       }));
-  }, [ordens, mesFilter]);
+  }, [filteredOrdens, mesFilter]);
 
   const tableTotals = useMemo(() => {
     return tableData.reduce((acc, r) => ({
@@ -69,7 +76,6 @@ const DashboardTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {statCards.map(c => (
           <div key={c.label} className={`${c.bg} border border-border rounded-lg p-4`}>
@@ -81,7 +87,6 @@ const DashboardTab: React.FC = () => {
         ))}
       </div>
 
-      {/* Chart */}
       <div className="bg-card border border-border rounded-lg p-4">
         <h3 className="font-display font-bold text-sm mb-4">Últimos 6 Meses</h3>
         <ResponsiveContainer width="100%" height={300}>
@@ -100,7 +105,6 @@ const DashboardTab: React.FC = () => {
         </ResponsiveContainer>
       </div>
 
-      {/* History table */}
       <div className="bg-card border border-border rounded-lg p-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-display font-bold text-sm">Histórico</h3>
@@ -120,7 +124,7 @@ const DashboardTab: React.FC = () => {
             <thead>
               <tr className="text-xs text-muted-foreground border-b border-border">
                 <th className="text-left pb-2">Data</th>
-                <th className="text-left pb-2">Código</th>
+                <th className="text-left pb-2">Empresa</th>
                 <th className="text-left pb-2">Nome</th>
                 <th className="text-right pb-2">Custo</th>
                 <th className="text-right pb-2">Faturado</th>

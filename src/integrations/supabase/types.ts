@@ -14,9 +14,34 @@ export type Database = {
   }
   public: {
     Tables: {
+      companies: {
+        Row: {
+          id: string
+          name: string
+          color: string | null
+          logo_url: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          color?: string | null
+          logo_url?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          color?: string | null
+          logo_url?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       ordens_servico: {
         Row: {
           cod: string
+          company_id: string | null
           created_at: string
           custo_items: Json
           data: string
@@ -24,12 +49,14 @@ export type Database = {
           id: string
           nome: string
           pgto: string
+          service_date: string | null
           status: string
           tel: string | null
           updated_at: string
         }
         Insert: {
           cod: string
+          company_id?: string | null
           created_at?: string
           custo_items?: Json
           data?: string
@@ -37,12 +64,14 @@ export type Database = {
           id?: string
           nome: string
           pgto?: string
+          service_date?: string | null
           status?: string
           tel?: string | null
           updated_at?: string
         }
         Update: {
           cod?: string
+          company_id?: string | null
           created_at?: string
           custo_items?: Json
           data?: string
@@ -50,6 +79,7 @@ export type Database = {
           id?: string
           nome?: string
           pgto?: string
+          service_date?: string | null
           status?: string
           tel?: string | null
           updated_at?: string

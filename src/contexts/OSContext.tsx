@@ -34,7 +34,6 @@ export const OSProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   const updateOrdem = useCallback((os: OrdemServico) => {
     setOrdens(prev => prev.map(o => o.id === os.id ? os : o));
-    // debounced autosave
     if (saveTimers.current[os.id]) clearTimeout(saveTimers.current[os.id]);
     saveTimers.current[os.id] = setTimeout(async () => {
       try {

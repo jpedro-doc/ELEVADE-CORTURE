@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import AppHeader from '@/components/AppHeader';
+import CompanySelector from '@/components/CompanySelector';
 import PedidosTab from '@/components/PedidosTab';
 import FaturamentoTab from '@/components/FaturamentoTab';
 import DashboardTab from '@/components/DashboardTab';
 import OSModal from '@/components/OSModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { OSProvider } from '@/contexts/OSContext';
+import { CompanyProvider } from '@/contexts/CompanyContext';
 import LoginPage from './LoginPage';
 
 const IndexContent: React.FC = () => {
@@ -23,19 +25,22 @@ const IndexContent: React.FC = () => {
   const tab = activeTab === 'dashboard' && !isOwner ? 'pedidos' : activeTab;
 
   return (
-    <OSProvider>
-      <div className="min-h-screen bg-background">
-        <AppHeader activeTab={tab} onTabChange={setActiveTab} />
-        <main className="container py-6">
-          {tab === 'pedidos' && <PedidosTab onOpenOS={openOS} />}
-          {tab === 'faturamento' && <FaturamentoTab onOpenOS={openOS} />}
-          {tab === 'dashboard' && isOwner && <DashboardTab />}
-        </main>
-        {modalOS && (
-          <OSModal osId={modalOS.id} initialMode={modalOS.mode} onClose={() => setModalOS(null)} />
-        )}
-      </div>
-    </OSProvider>
+    <CompanyProvider>
+      <OSProvider>
+        <div className="min-h-screen bg-background">
+          <AppHeader activeTab={tab} onTabChange={setActiveTab} />
+          <CompanySelector />
+          <main className="container py-6">
+            {tab === 'pedidos' && <PedidosTab onOpenOS={openOS} />}
+            {tab === 'faturamento' && <FaturamentoTab onOpenOS={openOS} />}
+            {tab === 'dashboard' && isOwner && <DashboardTab />}
+          </main>
+          {modalOS && (
+            <OSModal osId={modalOS.id} initialMode={modalOS.mode} onClose={() => setModalOS(null)} />
+          )}
+        </div>
+      </OSProvider>
+    </CompanyProvider>
   );
 };
 

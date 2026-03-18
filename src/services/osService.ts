@@ -1,9 +1,20 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { OrdemServico, CostItem } from '@/types/os';
+import type { OrdemServico, CostItem, BillingItem } from '@/types/os';
 import type { Json } from '@/integrations/supabase/types';
 
 function parseItems(json: Json): CostItem[] {
   if (Array.isArray(json)) return json as unknown as CostItem[];
+  return [];
+}
+
+function parseBillingItems(json: Json): BillingItem[] {
+  if (Array.isArray(json)) {
+    return (json as unknown as BillingItem[]).map(item => ({
+      ...item,
+      cost_unit: item.cost_unit ?? item.unit,
+      billing_manually_edited: item.billing_manually_edited ?? false,
+    }));
+  }
   return [];
 }
 
@@ -15,8 +26,10 @@ function rowToOS(row: any): OrdemServico {
     tel: row.tel,
     status: row.status as 'aberto' | 'finalizado',
     data: row.data,
+    service_date: null,
+    company_id: null,
     custo_items: parseItems(row.custo_items),
-    fat_items: parseItems(row.fat_items),
+    fat_items: parseBillingItems(row.fat_items),
     pgto: row.pgto,
   };
 }
@@ -45,16 +58,24 @@ export async function upsertOrdem(os: OrdemServico): Promise<void> {
   if (error) throw error;
 }
 
-export async function createOrdem(cod: string, nome: string, tel: string): Promise<OrdemServico> {
-  const { data, error } = await supabase.from('ordens_servico').insert({
-    cod,
-    nome,
-    tel: tel || null,
-    status: 'aberto',
-    custo_items: [] as unknown as Json,
-    fat_items: [] as unknown as Json,
-    pgto: '',
-  }).select().single();
+export async function createOrdem(
+  cod: string,
+  nome: string,
+  tel: string,
+): Promise<OrdemServico> {
+  const { data, error } = await supabase
+    .from('ordens_servico')
+    .insert({
+      cod,
+      nome,
+      tel: tel || null,
+      status: 'aberto',
+      custo_items: [] as unknown as Json,
+      fat_items: [] as unknown as Json,
+      pgto: '',
+    })
+    .select()
+    .single();
   if (error) throw error;
   return rowToOS(data);
 }

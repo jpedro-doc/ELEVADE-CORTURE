@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import { useOS } from '@/contexts/OSContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompany } from '@/contexts/CompanyContext';
 import OSCard from './OSCard';
 import { Search } from 'lucide-react';
 
 const FaturamentoTab: React.FC<{ onOpenOS: (id: string, mode?: string) => void }> = ({ onOpenOS }) => {
   const { ordens, loading } = useOS();
   const { isOwner } = useAuth();
+  const { selectedCod } = useCompany();
   const [search, setSearch] = useState('');
 
   const filtered = ordens.filter(o => {
+    if (selectedCod && o.cod !== selectedCod) return false;
     if (!search) return true;
     const s = search.toLowerCase();
     return o.cod.toLowerCase().includes(s) || o.nome.toLowerCase().includes(s);
@@ -22,7 +25,7 @@ const FaturamentoTab: React.FC<{ onOpenOS: (id: string, mode?: string) => void }
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Buscar por código ou nome..."
+          placeholder="Buscar por empresa ou nome..."
           className="w-full bg-muted border border-border rounded pl-9 pr-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
         />
       </div>
