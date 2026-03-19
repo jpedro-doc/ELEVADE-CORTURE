@@ -45,11 +45,17 @@ const PedidosTab: React.FC<{ onOpenOS: (id: string, mode?: string) => void }> = 
       {/* Create form */}
       <form onSubmit={handleCreate} className="bg-card border border-border rounded-lg p-4">
         <h2 className="font-display font-bold text-base mb-3">Nova Ordem de Serviço</h2>
+        <datalist id="empresas-list">
+          {[...new Set(ordens.map(o => o.cod))].sort().map(c => (
+            <option key={c} value={c} />
+          ))}
+        </datalist>
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <input
             value={cod}
             onChange={e => setCod(e.target.value.toUpperCase())}
             placeholder="Empresa"
+            list="empresas-list"
             className="bg-muted border border-border rounded px-3 py-2 text-sm font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
           />
           <input
