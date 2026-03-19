@@ -326,7 +326,7 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
                         <tr key={item.id} className="border-b border-border/50">
                           {/* Produto */}
                           <td className="py-1.5 pr-2 text-sm">
-                            {canEditFat && item.fat_only ? (
+                            {canEditFat ? (
                               <input
                                 value={item.desc}
                                 onChange={e => updateFatItem(item.id, 'desc', e.target.value)}
@@ -340,7 +340,7 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
                           </td>
                           {/* Qtd */}
                           <td className="py-1.5 px-2 text-right font-mono text-sm text-muted-foreground">
-                            {canEditFat && item.fat_only ? (
+                            {canEditFat ? (
                               <input
                                 type="number"
                                 min={0}
