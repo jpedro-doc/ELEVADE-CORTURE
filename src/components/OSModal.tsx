@@ -27,6 +27,7 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
   const [editingInfo, setEditingInfo] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [localOS, setLocalOS] = useState<OrdemServico | null>(null);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (os) setLocalOS({ ...os });
@@ -46,7 +47,18 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
   };
 
   const addCustoItem = () => {
-    setCustoItems([...localOS.custo_items, { id: crypto.randomUUID(), desc: '', qty: 1, unit: 0 }]);
+    const id = crypto.randomUUID();
+    setCustoItems([...localOS.custo_items, { id, desc: '', qty: 1, unit: 0 }]);
+    setPendingIds(prev => new Set(prev).add(id));
+  };
+
+  const confirmCustoItem = (id: string) => {
+    setPendingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
+  };
+
+  const cancelCustoItem = (id: string) => {
+    setPendingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
+    setCustoItems(localOS.custo_items.filter(i => i.id !== id));
   };
 
   const updateCustoItem = (id: string, field: keyof CostItem, value: string | number) => {
@@ -66,8 +78,9 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
   };
 
   const addFatItem = () => {
+    const id = crypto.randomUUID();
     const newItem: BillingItem = {
-      id: crypto.randomUUID(),
+      id,
       desc: '',
       qty: 1,
       unit: 0,
@@ -76,6 +89,16 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
       fat_only: true,
     };
     save({ ...localOS, fat_items: [...localOS.fat_items, newItem] });
+    setPendingIds(prev => new Set(prev).add(id));
+  };
+
+  const confirmFatItem = (id: string) => {
+    setPendingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
+  };
+
+  const cancelFatItem = (id: string) => {
+    setPendingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
+    removeFatItem(id);
   };
 
   const updateFatItem = (id: string, field: 'desc' | 'qty' | 'unit', value: string | number) => {
@@ -188,50 +211,78 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {localOS.custo_items.map(item => (
+                  {localOS.custo_items.map(item => {
+                    const isPending = pendingIds.has(item.id);
+                    const canEdit = editingInfo || isPending;
+                    return (
                     <tr key={item.id} className="border-b border-border/50">
                       <td className="py-1.5 pr-2">
-                        <input
-                          value={item.desc}
-                          onChange={e => updateCustoItem(item.id, 'desc', e.target.value)}
-                          className="w-full bg-transparent text-sm focus:outline-none focus:bg-muted/50 rounded px-1"
-                          placeholder="Descrição do item"
-                        />
+                        {canEdit ? (
+                          <input
+                            value={item.desc}
+                            onChange={e => updateCustoItem(item.id, 'desc', e.target.value)}
+                            className="w-full bg-transparent text-sm focus:outline-none focus:bg-muted/50 rounded px-1"
+                            placeholder="Descrição do item"
+                            autoFocus={isPending}
+                          />
+                        ) : (
+                          <span className="text-sm">{item.desc || <span className="text-muted-foreground italic">sem descrição</span>}</span>
+                        )}
+                      </td>
+                      <td className="py-1.5 px-2 text-right font-mono text-sm text-muted-foreground">
+                        {canEdit ? (
+                          <input
+                            type="number"
+                            min={0}
+                            value={item.qty}
+                            onChange={e => updateCustoItem(item.id, 'qty', Number(e.target.value))}
+                            className="w-full bg-transparent text-sm text-right font-mono focus:outline-none focus:bg-muted/50 rounded px-1"
+                          />
+                        ) : (
+                          item.qty
+                        )}
                       </td>
                       <td className="py-1.5 px-2">
-                        <input
-                          type="number"
-                          min={0}
-                          value={item.qty}
-                          onChange={e => updateCustoItem(item.id, 'qty', Number(e.target.value))}
-                          className="w-full bg-transparent text-sm text-right font-mono focus:outline-none focus:bg-muted/50 rounded px-1"
-                        />
-                      </td>
-                      <td className="py-1.5 px-2">
-                        <input
-                          type="number"
-                          min={0}
-                          step={0.01}
-                          value={item.unit}
-                          onChange={e => updateCustoItem(item.id, 'unit', Number(e.target.value))}
-                          className="w-full bg-transparent text-sm text-right font-mono focus:outline-none focus:bg-muted/50 rounded px-1"
-                        />
+                        {canEdit ? (
+                          <input
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            value={item.unit}
+                            onChange={e => updateCustoItem(item.id, 'unit', Number(e.target.value))}
+                            className="w-full bg-muted/50 border border-border/60 text-sm text-right font-mono rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-secondary"
+                          />
+                        ) : (
+                          <span className="font-mono text-sm text-right block">R$ {item.unit.toFixed(2)}</span>
+                        )}
                       </td>
                       <td className="py-1.5 px-2 text-right font-mono text-sm">
                         R$ {(item.qty * item.unit).toFixed(2)}
                       </td>
                       <td className="py-1.5">
-                        <button onClick={() => removeCustoItem(item.id)} className="p-0.5 text-muted-foreground hover:text-destructive">
-                          <Trash2 size={13} />
-                        </button>
+                        {isPending ? (
+                          <div className="flex gap-1">
+                            <button onClick={() => confirmCustoItem(item.id)} className="p-0.5 text-success hover:opacity-80" title="Salvar">
+                              ✓
+                            </button>
+                            <button onClick={() => cancelCustoItem(item.id)} className="p-0.5 text-destructive hover:opacity-80" title="Cancelar">
+                              ✗
+                            </button>
+                          </div>
+                        ) : editingInfo ? (
+                          <button onClick={() => removeCustoItem(item.id)} className="p-0.5 text-muted-foreground hover:text-destructive">
+                            <Trash2 size={13} />
+                          </button>
+                        ) : null}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
             <div className="flex items-center justify-between mt-3">
-              <button onClick={addCustoItem} className="flex items-center gap-1 text-xs text-primary hover:opacity-80">
+              <button onClick={addCustoItem} className="flex items-center gap-1 text-xs text-secondary hover:opacity-80">
                 <Plus size={14} /> Adicionar Item
               </button>
               <span className="font-mono text-sm font-semibold">
@@ -269,16 +320,19 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
                     {localOS.fat_items.map((item: BillingItem) => {
                       const costRef = item.cost_unit ?? 0;
                       const lucroItem = (item.unit - costRef) * item.qty;
+                      const isPending = pendingIds.has(item.id);
+                      const canEditFat = editingInfo || isPending;
                       return (
                         <tr key={item.id} className="border-b border-border/50">
                           {/* Produto */}
                           <td className="py-1.5 pr-2 text-sm">
-                            {item.fat_only ? (
+                            {canEditFat && item.fat_only ? (
                               <input
                                 value={item.desc}
                                 onChange={e => updateFatItem(item.id, 'desc', e.target.value)}
                                 className="w-full bg-transparent text-sm focus:outline-none focus:bg-muted/50 rounded px-1"
                                 placeholder="Descrição do item"
+                                autoFocus={isPending}
                               />
                             ) : (
                               item.desc || <span className="text-muted-foreground italic">sem descrição</span>
@@ -286,7 +340,7 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
                           </td>
                           {/* Qtd */}
                           <td className="py-1.5 px-2 text-right font-mono text-sm text-muted-foreground">
-                            {item.fat_only ? (
+                            {canEditFat && item.fat_only ? (
                               <input
                                 type="number"
                                 min={0}
@@ -300,7 +354,7 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
                           </td>
                           {/* Val. Faturamento */}
                           <td className="py-1.5 px-2">
-                            {editingInfo || item.fat_only ? (
+                            {canEditFat ? (
                               <input
                                 type="number"
                                 min={0}
@@ -328,13 +382,18 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
                               R$ {lucroItem.toFixed(2)}
                             </td>
                           )}
-                          {/* Remover — só itens fat_only */}
+                          {/* Ações */}
                           <td className="py-1.5">
-                            {item.fat_only && (
+                            {isPending ? (
+                              <div className="flex gap-1">
+                                <button onClick={() => confirmFatItem(item.id)} className="p-0.5 text-success hover:opacity-80" title="Salvar">✓</button>
+                                <button onClick={() => cancelFatItem(item.id)} className="p-0.5 text-destructive hover:opacity-80" title="Cancelar">✗</button>
+                              </div>
+                            ) : editingInfo && item.fat_only ? (
                               <button onClick={() => removeFatItem(item.id)} className="p-0.5 text-muted-foreground hover:text-destructive">
                                 <Trash2 size={13} />
                               </button>
-                            )}
+                            ) : null}
                           </td>
                         </tr>
                       );
