@@ -3,16 +3,26 @@ import { useOS } from '@/contexts/OSContext';
 import { useCompany } from '@/contexts/CompanyContext';
 import { calcTotal, calcLucro } from '@/types/os';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { deduplicateCI, normalizeKey } from '@/lib/utils';
 
 const DashboardTab: React.FC = () => {
   const { ordens } = useOS();
   const { selectedCod } = useCompany();
   const [mesFilter, setMesFilter] = useState('');
+  const [selectedNome, setSelectedNome] = useState('');
+
+  const allServices = useMemo(() => {
+    const base = selectedCod ? ordens.filter(o => o.cod === selectedCod) : ordens;
+    return deduplicateCI(base.map(o => o.nome));
+  }, [ordens, selectedCod]);
 
   const filteredOrdens = useMemo(() => {
-    if (!selectedCod) return ordens;
-    return ordens.filter(o => o.cod === selectedCod);
-  }, [ordens, selectedCod]);
+    return ordens.filter(o => {
+      if (selectedCod && o.cod !== selectedCod) return false;
+      if (selectedNome && normalizeKey(o.nome) !== normalizeKey(selectedNome)) return false;
+      return true;
+    });
+  }, [ordens, selectedCod, selectedNome]);
 
   const stats = useMemo(() => {
     const totalFat = filteredOrdens.reduce((s, o) => s + calcTotal(o.fat_items), 0);
@@ -76,6 +86,29 @@ const DashboardTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Filtro por serviço */}
+      <div className="flex items-center gap-3">
+        <label className="text-xs text-muted-foreground whitespace-nowrap">Filtrar por serviço:</label>
+        <select
+          value={selectedNome}
+          onChange={e => setSelectedNome(e.target.value)}
+          className="bg-muted border border-border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+        >
+          <option value="">Todos os serviços</option>
+          {allServices.map(s => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        {selectedNome && (
+          <button
+            onClick={() => setSelectedNome('')}
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            ✕ Limpar
+          </button>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {statCards.map(c => (
           <div key={c.label} className={`${c.bg} border border-border rounded-lg p-4`}>

@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { OrdemServico, CostItem, BillingItem } from '@/types/os';
 import { calcTotal, PAYMENT_METHODS, syncFatFromCusto } from '@/types/os';
 import { useOS } from '@/contexts/OSContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { X, Plus, Trash2, Pencil } from 'lucide-react';
+import { X, Plus, Trash2, Pencil, GripVertical } from 'lucide-react';
 import DeleteConfirmModal from './DeleteConfirmModal';
 
 interface Props {
@@ -28,6 +28,9 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
   const [showDelete, setShowDelete] = useState(false);
   const [localOS, setLocalOS] = useState<OrdemServico | null>(null);
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const dragItem = useRef<string | null>(null);
+  const dragOver = useRef<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   useEffect(() => {
     if (os) setLocalOS({ ...os });
@@ -110,6 +113,31 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
 
   const removeFatItem = (id: string) => {
     save({ ...localOS, fat_items: localOS.fat_items.filter(f => f.id !== id) });
+  };
+
+  // ─── Drag helpers ─────────────────────────────────────────────────────────
+  const onDragStart = (id: string) => { dragItem.current = id; };
+  const onDragEnter = (id: string) => { dragOver.current = id; setDragOverId(id); };
+  const onDragEnd = (list: 'custo' | 'fat') => {
+    setDragOverId(null);
+    const from = dragItem.current;
+    const to = dragOver.current;
+    if (!from || !to || from === to) return;
+    if (list === 'custo') {
+      const items = [...localOS.custo_items];
+      const fromIdx = items.findIndex(i => i.id === from);
+      const toIdx = items.findIndex(i => i.id === to);
+      items.splice(toIdx, 0, items.splice(fromIdx, 1)[0]);
+      setCustoItems(items);
+    } else {
+      const items = [...localOS.fat_items];
+      const fromIdx = items.findIndex(i => i.id === from);
+      const toIdx = items.findIndex(i => i.id === to);
+      items.splice(toIdx, 0, items.splice(fromIdx, 1)[0]);
+      save({ ...localOS, fat_items: items });
+    }
+    dragItem.current = null;
+    dragOver.current = null;
   };
 
   const billingTotal = calcTotal(localOS.fat_items);
@@ -203,6 +231,7 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-xs text-muted-foreground border-b border-border">
+                    <th className="w-4"></th>
                     <th className="text-left pb-2 pr-2">Descrição</th>
                     <th className="text-right pb-2 px-2 w-20">Qtd</th>
                     <th className="text-right pb-2 px-2 w-28">Valor Unit.</th>
@@ -215,7 +244,18 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
                     const isPending = pendingIds.has(item.id);
                     const canEdit = editingInfo || isPending;
                     return (
-                    <tr key={item.id} className="border-b border-border/50">
+                    <tr
+                      key={item.id}
+                      draggable
+                      onDragStart={() => onDragStart(item.id)}
+                      onDragEnter={() => onDragEnter(item.id)}
+                      onDragEnd={() => onDragEnd('custo')}
+                      onDragOver={e => e.preventDefault()}
+                      className={`border-b border-border/50 transition-colors ${dragOverId === item.id ? 'bg-muted/60' : ''}`}
+                    >
+                      <td className="py-1.5 pr-1 cursor-grab text-muted-foreground">
+                        <GripVertical size={13} />
+                      </td>
                       <td className="py-1.5 pr-2">
                         {canEdit ? (
                           <input
@@ -308,6 +348,7 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-xs text-muted-foreground border-b border-border">
+                      <th className="w-4"></th>
                       <th className="text-left pb-2 pr-2">Produto</th>
                       <th className="text-right pb-2 px-2 w-14">Qtd</th>
                       <th className="text-right pb-2 px-2 w-28">Val. Faturamento</th>
@@ -323,7 +364,18 @@ const OSModal: React.FC<Props> = ({ osId, initialMode, onClose }) => {
                       const isPending = pendingIds.has(item.id);
                       const canEditFat = editingInfo || isPending;
                       return (
-                        <tr key={item.id} className="border-b border-border/50">
+                        <tr
+                          key={item.id}
+                          draggable
+                          onDragStart={() => onDragStart(item.id)}
+                          onDragEnter={() => onDragEnter(item.id)}
+                          onDragEnd={() => onDragEnd('fat')}
+                          onDragOver={e => e.preventDefault()}
+                          className={`border-b border-border/50 transition-colors ${dragOverId === item.id ? 'bg-muted/60' : ''}`}
+                        >
+                          <td className="py-1.5 pr-1 cursor-grab text-muted-foreground">
+                            <GripVertical size={13} />
+                          </td>
                           {/* Produto */}
                           <td className="py-1.5 pr-2 text-sm">
                             {canEditFat ? (

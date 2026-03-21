@@ -4,6 +4,7 @@ import CompanySelector from '@/components/CompanySelector';
 import PedidosTab from '@/components/PedidosTab';
 import FaturamentoTab from '@/components/FaturamentoTab';
 import DashboardTab from '@/components/DashboardTab';
+import LixeiraTab from '@/components/LixeiraTab';
 import OSModal from '@/components/OSModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { OSProvider } from '@/contexts/OSContext';
@@ -34,6 +35,7 @@ const IndexContent: React.FC = () => {
             {tab === 'pedidos' && <PedidosTab onOpenOS={openOS} />}
             {tab === 'faturamento' && <FaturamentoTab onOpenOS={openOS} />}
             {tab === 'dashboard' && isOwner && <DashboardTab />}
+            {tab === 'lixeira' && <LixeiraTab />}
           </main>
           {modalOS && (
             <OSModal osId={modalOS.id} initialMode={modalOS.mode} onClose={() => setModalOS(null)} />

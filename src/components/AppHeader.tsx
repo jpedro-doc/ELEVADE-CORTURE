@@ -9,6 +9,7 @@ const AppHeader: React.FC<{ activeTab: string; onTabChange: (tab: string) => voi
     { id: 'pedidos', label: 'Pedidos / OS' },
     { id: 'faturamento', label: 'Faturamento' },
     ...(isOwner ? [{ id: 'dashboard', label: 'Dashboard' }] : []),
+    { id: 'lixeira', label: 'Lixeira' },
   ];
 
   return (

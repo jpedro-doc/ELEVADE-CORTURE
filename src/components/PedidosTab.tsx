@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useOS } from '@/contexts/OSContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
+import { usePinned } from '@/hooks/usePinned';
 import { toast } from '@/hooks/use-toast';
 import OSCard from './OSCard';
-import { Search } from 'lucide-react';
+import { Search, Pin, PinOff } from 'lucide-react';
+import { deduplicateCI, normalizeKey } from '@/lib/utils';
 
 const PedidosTab: React.FC<{ onOpenOS: (id: string, mode?: string) => void }> = ({ onOpenOS }) => {
   const { ordens, loading, addOrdem } = useOS();
@@ -15,6 +17,10 @@ const PedidosTab: React.FC<{ onOpenOS: (id: string, mode?: string) => void }> = 
   const [tel, setTel] = useState('');
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'aberto' | 'finalizado'>('all');
+  const { pinned: pinnedServices, toggle: toggleService, isPinned: isServicePinned } = usePinned('gestao-pro-pinned-services');
+  const [managingServicePins, setManagingServicePins] = useState(false);
+
+  const allServices = deduplicateCI(ordens.map(o => o.nome));
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,8 +40,8 @@ const PedidosTab: React.FC<{ onOpenOS: (id: string, mode?: string) => void }> = 
     if (selectedCod && o.cod !== selectedCod) return false;
     if (filterStatus !== 'all' && o.status !== filterStatus) return false;
     if (search) {
-      const s = search.toLowerCase();
-      return o.cod.toLowerCase().includes(s) || o.nome.toLowerCase().includes(s);
+      const s = normalizeKey(search);
+      return normalizeKey(o.cod).includes(s) || normalizeKey(o.nome).includes(s);
     }
     return true;
   });
@@ -44,7 +50,18 @@ const PedidosTab: React.FC<{ onOpenOS: (id: string, mode?: string) => void }> = 
     <div className="space-y-6">
       {/* Create form */}
       <form onSubmit={handleCreate} className="bg-card border border-border rounded-lg p-4">
-        <h2 className="font-display font-bold text-base mb-3">Nova Ordem de Serviço</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-display font-bold text-base">Nova Ordem de Serviço</h2>
+          <button
+            type="button"
+            onClick={() => setManagingServicePins(p => !p)}
+            className={`flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors ${
+              managingServicePins ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+            }`}
+          >
+            <Pin size={11} /> {managingServicePins ? 'Concluir' : 'Fixar serviços'}
+          </button>
+        </div>
         <datalist id="empresas-list">
           {[...new Set(ordens.map(o => o.cod))].sort().map(c => (
             <option key={c} value={c} />
@@ -77,6 +94,36 @@ const PedidosTab: React.FC<{ onOpenOS: (id: string, mode?: string) => void }> = 
           </div>
         </div>
       </form>
+
+      {/* Serviços fixados */}
+      {(pinnedServices.length > 0 || managingServicePins) && (
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-xs text-muted-foreground">Serviços fixados:</span>
+          {(managingServicePins ? allServices : pinnedServices).map(s => (
+            <div key={s} className="flex items-center gap-1">
+              <button
+                onClick={() => !managingServicePins && setNome(s)}
+                className={`text-xs px-2 py-1 rounded border transition-colors ${
+                  managingServicePins
+                    ? isServicePinned(s) ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground opacity-60'
+                    : 'border-border bg-muted hover:bg-muted/80 text-foreground'
+                }`}
+              >
+                {s}
+              </button>
+              {managingServicePins && (
+                <button
+                  onClick={() => toggleService(s)}
+                  className="text-muted-foreground hover:text-primary"
+                  title={isServicePinned(s) ? 'Desafixar' : 'Fixar'}
+                >
+                  {isServicePinned(s) ? <PinOff size={12} /> : <Pin size={12} />}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Search and filter */}
       <div className="flex flex-col sm:flex-row gap-3">
