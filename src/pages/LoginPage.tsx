@@ -18,10 +18,10 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm">
         <h1 className="text-3xl font-display font-extrabold text-primary mb-2 text-center">
-          GestãoPro
+          ELEVADE CORTURE
         </h1>
         <p className="text-muted-foreground text-center mb-8 text-sm">
-          Sistema de Gestão de Ordens de Serviço
+          Sistema de Gestão
         </p>
         <form onSubmit={handleSubmit} className="space-y-4 bg-card border border-border rounded-lg p-6">
           <div>

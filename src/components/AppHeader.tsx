@@ -17,7 +17,7 @@ const AppHeader: React.FC<{ activeTab: string; onTabChange: (tab: string) => voi
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
       <div className="container flex items-center justify-between h-14">
         <div className="flex items-center gap-6">
-          <h1 className="font-display font-extrabold text-lg text-primary tracking-tight">GestãoPro</h1>
+          <h1 className="font-display font-extrabold text-lg text-primary tracking-tight">ELEVADE CORTURE</h1>
           <nav className="flex gap-1">
             {tabs.map(t => (
               <button
