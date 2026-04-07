@@ -23,10 +23,7 @@ const USERS: Record<string, { password: string; role: UserRole; displayName: str
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('gestao-pro-user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [user, setUser] = useState<User | null>({ username: 'dono', role: 'owner', displayName: 'Dono' });
 
   const login = useCallback((username: string, password: string): boolean => {
     const entry = USERS[username.toLowerCase()];

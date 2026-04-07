@@ -1,51 +1,33 @@
-import React, { useState } from 'react';
-import AppHeader from '@/components/AppHeader';
-import CompanySelector from '@/components/CompanySelector';
-import PedidosTab from '@/components/PedidosTab';
-import FaturamentoTab from '@/components/FaturamentoTab';
-import DashboardTab from '@/components/DashboardTab';
-import LixeiraTab from '@/components/LixeiraTab';
-import OSModal from '@/components/OSModal';
-import { useAuth } from '@/contexts/AuthContext';
-import { OSProvider } from '@/contexts/OSContext';
-import { CompanyProvider } from '@/contexts/CompanyContext';
-import LoginPage from './LoginPage';
+import React from 'react';
+import PrecificacaoTab from '@/components/PrecificacaoTab';
 
-const IndexContent: React.FC = () => {
-  const { user, isOwner } = useAuth();
-  const [activeTab, setActiveTab] = useState('pedidos');
-  const [modalOS, setModalOS] = useState<{ id: string; mode: 'custos' | 'faturamento' } | null>(null);
-
-  if (!user) return <LoginPage />;
-
-  const openOS = (id: string, mode?: string) => {
-    setModalOS({ id, mode: (mode as 'custos' | 'faturamento') || 'custos' });
-  };
-
-  // Prevent non-owners from accessing dashboard
-  const tab = activeTab === 'dashboard' && !isOwner ? 'pedidos' : activeTab;
-
-  return (
-    <CompanyProvider>
-      <OSProvider>
-        <div className="min-h-screen bg-background">
-          <AppHeader activeTab={tab} onTabChange={setActiveTab} />
-          <CompanySelector />
-          <main className="container py-6">
-            {tab === 'pedidos' && <PedidosTab onOpenOS={openOS} />}
-            {tab === 'faturamento' && <FaturamentoTab onOpenOS={openOS} />}
-            {tab === 'dashboard' && isOwner && <DashboardTab />}
-            {tab === 'lixeira' && <LixeiraTab />}
-          </main>
-          {modalOS && (
-            <OSModal osId={modalOS.id} initialMode={modalOS.mode} onClose={() => setModalOS(null)} />
-          )}
+const Index: React.FC = () => (
+  <div className="min-h-screen bg-background">
+    <header style={{ borderBottom: '1px solid #2a2a2a' }} className="sticky top-0 z-50 bg-[#040404]/95 backdrop-blur-md">
+      <div className="container h-16 flex items-center justify-between">
+        <div className="flex items-baseline gap-3">
+          <h1
+            style={{ fontFamily: 'Poppins, sans-serif', fontSize: '0.85rem', fontWeight: 600, letterSpacing: '0.4em' }}
+            className="text-[#e0e0e0]"
+          >
+            ELEVADE
+          </h1>
+          <span
+            style={{ fontFamily: 'Poppins, sans-serif', fontSize: '0.85rem', fontWeight: 200, letterSpacing: '0.4em' }}
+            className="text-[#555]"
+          >
+            CORTURE
+          </span>
         </div>
-      </OSProvider>
-    </CompanyProvider>
-  );
-};
-
-const Index: React.FC = () => <IndexContent />;
+        <span className="text-[8px] tracking-[0.35em] uppercase text-[#333] font-medium">
+          Dashboard de Precificação
+        </span>
+      </div>
+    </header>
+    <main className="container py-10">
+      <PrecificacaoTab />
+    </main>
+  </div>
+);
 
 export default Index;

@@ -9,6 +9,7 @@ const AppHeader: React.FC<{ activeTab: string; onTabChange: (tab: string) => voi
     { id: 'pedidos', label: 'Pedidos / OS' },
     { id: 'faturamento', label: 'Faturamento' },
     ...(isOwner ? [{ id: 'dashboard', label: 'Dashboard' }] : []),
+    { id: 'precificacao', label: 'Precificação' },
     { id: 'lixeira', label: 'Lixeira' },
   ];
 
@@ -32,19 +33,6 @@ const AppHeader: React.FC<{ activeTab: string; onTabChange: (tab: string) => voi
               </button>
             ))}
           </nav>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-foreground">{user?.displayName}</span>
-            <span className={`text-xs px-2 py-0.5 rounded font-mono ${
-              isOwner ? 'bg-primary/20 text-primary' : 'bg-secondary/20 text-secondary'
-            }`}>
-              {isOwner ? 'Owner' : 'Employee'}
-            </span>
-          </div>
-          <button onClick={logout} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors">
-            <LogOut size={16} />
-          </button>
         </div>
       </div>
     </header>

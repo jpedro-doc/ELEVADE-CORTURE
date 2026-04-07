@@ -1,26 +1,30 @@
-import { supabase } from '@/integrations/supabase/client';
 import type { Company } from '@/types/company';
 
+const KEY = 'gestao_pro_companies';
+
+function load(): Company[] {
+  try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; }
+}
+
+function save(companies: Company[]) {
+  localStorage.setItem(KEY, JSON.stringify(companies));
+}
+
 export async function fetchCompanies(): Promise<Company[]> {
-  const { data, error } = await supabase
-    .from('companies')
-    .select('*')
-    .order('created_at', { ascending: true });
-  if (error) throw error;
-  return (data || []) as Company[];
+  return load();
 }
 
 export async function createCompany(name: string, color?: string): Promise<Company> {
-  const { data, error } = await supabase
-    .from('companies')
-    .insert({ name, color: color || null })
-    .select()
-    .single();
-  if (error) throw error;
-  return data as Company;
+  const company: Company = {
+    id: crypto.randomUUID(),
+    name,
+    color: color || null,
+    logo_url: null,
+  };
+  save([...load(), company]);
+  return company;
 }
 
 export async function deleteCompany(id: string): Promise<void> {
-  const { error } = await supabase.from('companies').delete().eq('id', id);
-  if (error) throw error;
+  save(load().filter(c => c.id !== id));
 }

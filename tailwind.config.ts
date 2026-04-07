@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ["Syne", "sans-serif"],
-        body: ["DM Sans", "sans-serif"],
+        display: ["Poppins", "sans-serif"],
+        body: ["Poppins", "sans-serif"],
         mono: ["DM Mono", "monospace"],
       },
       colors: {
