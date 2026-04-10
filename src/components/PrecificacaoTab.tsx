@@ -1,8 +1,4 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  Cell, ReferenceLine,
-} from 'recharts';
 import { Trash2, Plus, TrendingUp, Target, DollarSign, BarChart2 } from 'lucide-react';
 import {
   fetchProdutos, createProduto, updateProduto, deleteProduto,
@@ -17,12 +13,11 @@ const fmtK = (v: number) => v >= 1000 ? `R$ ${(v / 1000).toFixed(1)}k` : `R$ ${v
 const pct  = (v: number) => `${v.toFixed(1)}%`;
 
 function calc(p: Produto, metaMensal: number) {
-  // lucro planejado usa metaVenda; lucro real usa precoVenda
-  const vendido        = p.precoVenda ?? 0;
-  const planejado      = p.metaVenda ?? 0;
+  const vendido   = p.precoVenda ?? 0;
+  const planejado = p.metaVenda ?? 0;
 
-  const lucroReal      = vendido > 0    ? vendido   - p.precoCusto : null;
-  const lucroPlanejado = planejado > 0  ? planejado - p.precoCusto : null;
+  const lucroReal      = vendido > 0   ? vendido   - p.precoCusto : null;
+  const lucroPlanejado = planejado > 0 ? planejado - p.precoCusto : null;
 
   const margemReal      = lucroReal      !== null && vendido > 0   ? (lucroReal / vendido) * 100       : null;
   const margemPlanejada = lucroPlanejado !== null && planejado > 0 ? (lucroPlanejado / planejado) * 100 : null;
@@ -30,7 +25,6 @@ function calc(p: Produto, metaMensal: number) {
   const markupReal      = lucroReal      !== null && p.precoCusto > 0 ? (lucroReal / p.precoCusto) * 100      : null;
   const markupPlanejado = lucroPlanejado !== null && p.precoCusto > 0 ? (lucroPlanejado / p.precoCusto) * 100 : null;
 
-  // unidades para meta: usa venda real se disponível, senão meta de venda
   const precoRef  = vendido > 0 ? vendido : planejado;
   const unidades  = precoRef > 0 ? Math.ceil(metaMensal / precoRef) : null;
   const lucroMeta = (lucroReal ?? lucroPlanejado) !== null && unidades !== null
@@ -52,35 +46,6 @@ const inputCls = [
   'text-sm text-[#e8e8e8] font-medium tracking-wide',
   'placeholder:text-[#2a2a2a] focus:border-[#666] focus:outline-none transition-colors',
 ].join(' ');
-
-const axisStyle = { fill: '#555', fontSize: 10, fontFamily: 'Poppins', fontWeight: 500, letterSpacing: 1 };
-
-const tooltipBox = {
-  backgroundColor: '#0a0a0a',
-  border: '1px solid #2a2a2a',
-  borderRadius: 0,
-  fontFamily: 'Poppins',
-  fontSize: 11,
-  color: '#e0e0e0',
-  padding: '12px 16px',
-};
-
-/* ─── Tooltip ────────────────────────────────────────────────────────────── */
-
-const CustomTooltip = ({ active, payload, label: lbl, currency = true }: any) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div style={tooltipBox}>
-      <p className="text-[10px] tracking-[0.2em] uppercase text-[#555] mb-2 font-medium">{lbl}</p>
-      {payload.map((e: any) => (
-        <div key={e.dataKey} className="flex justify-between gap-8 mb-1">
-          <span className="text-[#555] tracking-[0.15em] uppercase text-[10px] font-medium">{e.dataKey}</span>
-          <span className="text-[#d0d0d0] font-medium">{currency ? fmt(e.value) : e.value}</span>
-        </div>
-      ))}
-    </div>
-  );
-};
 
 /* ─── KPI Card ───────────────────────────────────────────────────────────── */
 
@@ -106,19 +71,6 @@ const SectionHeader: React.FC<{ title: string; subtitle?: string }> = ({ title, 
   </div>
 );
 
-/* ─── Legend Row ─────────────────────────────────────────────────────────── */
-
-const Legend: React.FC<{ items: [string, string][] }> = ({ items }) => (
-  <div className="flex gap-8 mt-4 pl-1">
-    {items.map(([c, l]) => (
-      <div key={l} className="flex items-center gap-2">
-        <div style={{ backgroundColor: c, width: 24, height: 2 }} />
-        <span className="text-[10px] tracking-[0.18em] uppercase text-[#555] font-medium">{l}</span>
-      </div>
-    ))}
-  </div>
-);
-
 /* ─── Main ───────────────────────────────────────────────────────────────── */
 
 const PrecificacaoTab: React.FC = () => {
@@ -135,7 +87,6 @@ const PrecificacaoTab: React.FC = () => {
   const [error, setError]           = useState('');
   const [editVenda, setEditVenda]   = useState<Record<string, string>>({});
 
-  // Carrega dados do Supabase
   useEffect(() => {
     Promise.all([fetchProdutos(), fetchMetaMensal()])
       .then(([prods, meta]) => {
@@ -150,8 +101,12 @@ const PrecificacaoTab: React.FC = () => {
   const salvarMeta = async () => {
     const v = parseFloat(metaInput.replace(',', '.'));
     if (!v || v <= 0) return;
-    await saveMetaMensal(v);
-    setMetaMensal(v);
+    try {
+      await saveMetaMensal(v);
+      setMetaMensal(v);
+    } catch {
+      setDbError('Erro ao salvar meta mensal. Verifique a conexão.');
+    }
   };
 
   const handleAdd = async () => {
@@ -164,9 +119,13 @@ const PrecificacaoTab: React.FC = () => {
     if (venda !== null && venda <= 0)    { setError('Preço de venda inválido.'); return; }
     if (venda !== null && venda < custo) { setError('Venda não pode ser menor que o custo.'); return; }
     setError('');
-    const novo = await createProduto({ nome: nome.trim(), precoCusto: custo, metaVenda: metaV, precoVenda: venda });
-    setProdutos(prev => [novo, ...prev]);
-    setNome(''); setPrecoCusto(''); setMetaVendaInput(''); setPrecoVenda('');
+    try {
+      const novo = await createProduto({ nome: nome.trim(), precoCusto: custo, metaVenda: metaV, precoVenda: venda });
+      setProdutos(prev => [novo, ...prev]);
+      setNome(''); setPrecoCusto(''); setMetaVendaInput(''); setPrecoVenda('');
+    } catch {
+      setError('Erro ao salvar produto. Verifique a conexão.');
+    }
   };
 
   const salvarVenda = async (id: string) => {
@@ -182,48 +141,30 @@ const PrecificacaoTab: React.FC = () => {
   };
 
   const remove = async (id: string) => {
-    await deleteProduto(id);
-    setProdutos(prev => prev.filter(p => p.id !== id));
+    try {
+      await deleteProduto(id);
+      setProdutos(prev => prev.filter(p => p.id !== id));
+    } catch {
+      setError('Erro ao remover produto. Verifique a conexão.');
+    }
   };
 
   /* ── Derived ── */
   const rows = useMemo(() => produtos.map(p => ({ ...p, ...calc(p, metaMensal) })), [produtos, metaMensal]);
 
-  const rowsComPreco    = useMemo(() => rows.filter(r => r.precoVenda !== null || r.metaVenda !== null), [rows]);
+  const rowsComPreco = useMemo(() => rows.filter(r => r.precoVenda !== null || r.metaVenda !== null), [rows]);
 
-  const totalLucroMeta  = useMemo(() => rowsComPreco.reduce((s, r) => s + (r.lucroMeta ?? 0), 0), [rowsComPreco]);
-  const margemMedia     = useMemo(() => {
+  const totalLucroMeta = useMemo(() => rowsComPreco.reduce((s, r) => s + (r.lucroMeta ?? 0), 0), [rowsComPreco]);
+
+  const margemMedia = useMemo(() => {
     const validos = rowsComPreco.filter(r => r.margemReal !== null || r.margemPlanejada !== null);
     return validos.length ? validos.reduce((s, r) => s + (r.margemReal ?? r.margemPlanejada ?? 0), 0) / validos.length : 0;
   }, [rowsComPreco]);
-  const melhorProduto   = useMemo(() => {
+
+  const melhorProduto = useMemo(() => {
     const validos = rowsComPreco.filter(r => r.margemReal !== null || r.margemPlanejada !== null);
     return validos.length ? validos.reduce((a, b) => (a.margemReal ?? a.margemPlanejada ?? 0) > (b.margemReal ?? b.margemPlanejada ?? 0) ? a : b) : null;
   }, [rowsComPreco]);
-
-  const shorten = (n: string) => n.length > 14 ? n.slice(0,14)+'…' : n;
-
-  const barPrecosData   = useMemo(() => [...rowsComPreco].reverse().map(p => ({
-    nome: shorten(p.nome),
-    Custo: p.precoCusto,
-    ...(p.metaVenda ? { 'Meta Venda': p.metaVenda } : {}),
-    ...(p.precoVenda ? { 'Venda Real': p.precoVenda } : {}),
-  })), [rowsComPreco]);
-
-  const barMetasData    = useMemo(() => [...rowsComPreco].reverse().map(p => {
-    const precoRef = p.precoVenda ?? p.metaVenda ?? 0;
-    return { nome: shorten(p.nome), 'Faturamento Necessário': parseFloat(((p.unidades ?? 0) * precoRef).toFixed(2)), 'Lucro Projetado': parseFloat((p.lucroMeta ?? 0).toFixed(2)) };
-  }), [rowsComPreco]);
-
-  const unidadesData    = useMemo(() => [...rowsComPreco].reverse().map(p => ({ nome: shorten(p.nome), Unidades: p.unidades ?? 0 })), [rowsComPreco]);
-
-  const margemData      = useMemo(() => [...rowsComPreco].reverse().map(p => ({
-    nome: shorten(p.nome),
-    ...(p.margemPlanejada !== null ? { 'Margem Planejada': parseFloat(p.margemPlanejada.toFixed(1)) } : {}),
-    ...(p.margemReal !== null      ? { 'Margem Real': parseFloat(p.margemReal.toFixed(1)) } : {}),
-  })), [rowsComPreco]);
-
-  const grays = ['#e8e8e8', '#aaa', '#666', '#3a3a3a', '#222'];
 
   if (loading) return (
     <div className="max-w-6xl mx-auto py-24 text-center">
@@ -359,86 +300,6 @@ const PrecificacaoTab: React.FC = () => {
             </div>
           </section>
 
-          {/* ════ UNIDADES PARA BATER A META ════ */}
-          {metaMensal > 0 && (
-            <section style={{ borderBottom: BORDER }} className="mb-14 pb-14">
-              <SectionHeader
-                title="Unidades para Bater a Meta Mensal"
-                subtitle={`Quantas vendas de cada produto são necessárias para atingir ${fmt(metaMensal)}/mês`}
-              />
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={unidadesData} barCategoryGap="45%"
-                  margin={{ top: 4, right: 0, left: -10, bottom: 0 }}>
-                  <XAxis dataKey="nome" tick={axisStyle} axisLine={{ stroke: '#2a2a2a' }} tickLine={false} />
-                  <YAxis allowDecimals={false} tick={axisStyle} axisLine={false} tickLine={false} />
-                  <Tooltip content={<CustomTooltip currency={false} />} />
-                  <Bar dataKey="Unidades" radius={0}>
-                    {unidadesData.map((_, i) => (
-                      <Cell key={i} fill={grays[i % grays.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </section>
-          )}
-
-          {/* ════ FATURAMENTO vs LUCRO ════ */}
-          {metaMensal > 0 && (
-            <section style={{ borderBottom: BORDER }} className="mb-14 pb-14">
-              <SectionHeader
-                title="Faturamento & Lucro Projetados"
-                subtitle="Faturamento necessário vs. lucro projetado por produto ao atingir a meta"
-              />
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={barMetasData} barCategoryGap="35%" barGap={4}
-                  margin={{ top: 4, right: 0, left: -10, bottom: 0 }}>
-                  <XAxis dataKey="nome" tick={axisStyle} axisLine={{ stroke: '#2a2a2a' }} tickLine={false} />
-                  <YAxis tick={axisStyle} axisLine={false} tickLine={false} tickFormatter={fmtK} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="Faturamento Necessário" fill="#2a2a2a" />
-                  <Bar dataKey="Lucro Projetado" fill="#e0e0e0" />
-                </BarChart>
-              </ResponsiveContainer>
-              <Legend items={[['#2a2a2a', 'Faturamento Necessário'], ['#e0e0e0', 'Lucro Projetado']]} />
-            </section>
-          )}
-
-          {/* ════ PREÇOS ════ */}
-          <section style={{ borderBottom: BORDER }} className="mb-14 pb-14">
-            <SectionHeader title="Comparativo de Preços" subtitle="Custo, venda e lucro unitário por produto" />
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={barPrecosData} barCategoryGap="35%" barGap={3}
-                margin={{ top: 4, right: 0, left: -10, bottom: 0 }}>
-                <XAxis dataKey="nome" tick={axisStyle} axisLine={{ stroke: '#2a2a2a' }} tickLine={false} />
-                <YAxis tick={axisStyle} axisLine={false} tickLine={false} tickFormatter={fmtK} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="Custo" fill="#252525" />
-                <Bar dataKey="Venda" fill="#888" />
-                <Bar dataKey="Lucro" fill="#e8e8e8" />
-              </BarChart>
-            </ResponsiveContainer>
-            <Legend items={[['#252525', 'Custo'], ['#888', 'Venda'], ['#e8e8e8', 'Lucro / un']]} />
-          </section>
-
-          {/* ════ MARGENS ════ */}
-          <section style={{ borderBottom: BORDER }} className="mb-14 pb-14">
-            <SectionHeader title="Margem & Markup" subtitle="Indicadores de rentabilidade percentual por produto" />
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={margemData} barCategoryGap="40%" barGap={4}
-                margin={{ top: 4, right: 0, left: -10, bottom: 0 }}>
-                <XAxis dataKey="nome" tick={axisStyle} axisLine={{ stroke: '#2a2a2a' }} tickLine={false} />
-                <YAxis tick={axisStyle} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} />
-                <ReferenceLine y={20} stroke="#2a2a2a" strokeDasharray="4 4" />
-                <Tooltip content={<CustomTooltip currency={false} />} />
-                <Bar dataKey="Margem" fill="#aaa" />
-                <Bar dataKey="Markup" fill="#333" />
-              </BarChart>
-            </ResponsiveContainer>
-            <p className="text-[10px] tracking-[0.18em] text-[#333] mt-3 font-medium">
-              — linha de referência: 20% de margem mínima recomendada
-            </p>
-          </section>
-
           {/* ════ TABLE ════ */}
           <section>
             <SectionHeader title="Análise Detalhada" subtitle="Todos os indicadores por produto" />
@@ -463,7 +324,6 @@ const PrecificacaoTab: React.FC = () => {
                       </td>
                       <td className="py-4 pr-5 font-mono text-sm text-[#555] font-medium">{fmt(p.precoCusto)}</td>
 
-                      {/* Meta de Venda */}
                       <td className="py-4 pr-5 font-mono text-sm text-[#666] font-medium">
                         {p.metaVenda !== null ? fmt(p.metaVenda) : <span className="text-[#2a2a2a]">—</span>}
                       </td>
