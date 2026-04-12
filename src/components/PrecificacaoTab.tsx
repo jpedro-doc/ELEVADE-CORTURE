@@ -186,12 +186,12 @@ const PrecificacaoTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdut
 
   const rowsComPreco = useMemo(() => rows.filter(r => r.precoVenda !== null || r.metaVenda !== null), [rows]);
 
-  const totalLucroMeta = useMemo(() => rowsComPreco.reduce((s, r) => s + (r.lucroMeta ?? 0), 0), [rowsComPreco]);
-
   const margemMedia = useMemo(() => {
     const validos = rowsComPreco.filter(r => r.margemReal !== null || r.margemPlanejada !== null);
     return validos.length ? validos.reduce((s, r) => s + (r.margemReal ?? r.margemPlanejada ?? 0), 0) / validos.length : 0;
   }, [rowsComPreco]);
+
+  const totalLucroMeta = useMemo(() => metaMensal * (margemMedia / 100), [metaMensal, margemMedia]);
 
   const melhorProduto = useMemo(() => {
     const validos = rowsComPreco.filter(r => r.margemReal !== null || r.margemPlanejada !== null);
