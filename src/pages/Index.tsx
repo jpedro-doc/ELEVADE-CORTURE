@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PrecificacaoTab from '@/components/PrecificacaoTab';
 import VendasTab from '@/components/VendasTab';
+import { fetchProdutos, type Produto } from '@/services/produtoService';
 
 type Tab = 'precificacao' | 'vendas';
 
@@ -9,12 +10,24 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'vendas',       label: 'Vendas'       },
 ];
 
+const BORDER = '1px solid #2a2a2a';
+
 const Index: React.FC = () => {
   const [tab, setTab] = useState<Tab>('precificacao');
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [loadingProdutos, setLoadingProdutos] = useState(true);
+  const [dbError, setDbError] = useState('');
+
+  useEffect(() => {
+    fetchProdutos()
+      .then(setProdutos)
+      .catch(err => setDbError(String(err?.message ?? err)))
+      .finally(() => setLoadingProdutos(false));
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
-      <header style={{ borderBottom: '1px solid #2a2a2a' }} className="sticky top-0 z-50 bg-[#040404]/95 backdrop-blur-md">
+      <header style={{ borderBottom: BORDER }} className="sticky top-0 z-50 bg-[#040404]/95 backdrop-blur-md">
         <div className="container h-16 flex items-center justify-between">
           <div className="flex items-baseline gap-3">
             <h1
@@ -31,15 +44,12 @@ const Index: React.FC = () => {
             </span>
           </div>
 
-          {/* Nav de abas */}
           <nav className="flex items-center gap-1">
             {TABS.map(t => (
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                style={{
-                  borderBottom: tab === t.id ? '1px solid #666' : '1px solid transparent',
-                }}
+                style={{ borderBottom: tab === t.id ? '1px solid #666' : '1px solid transparent' }}
                 className={[
                   'px-4 py-1.5 text-[10px] tracking-[0.22em] uppercase font-medium transition-colors',
                   tab === t.id ? 'text-[#e0e0e0]' : 'text-[#444] hover:text-[#888]',
@@ -53,8 +63,29 @@ const Index: React.FC = () => {
       </header>
 
       <main className="container py-10">
-        {tab === 'precificacao' && <PrecificacaoTab />}
-        {tab === 'vendas'       && <VendasTab />}
+        {dbError ? (
+          <div className="py-24 text-center space-y-3">
+            <p className="text-[10px] tracking-[0.3em] uppercase text-[#666] font-medium">Erro de conexão com o banco</p>
+            <p className="font-mono text-xs text-[#444] max-w-lg mx-auto break-words">{dbError}</p>
+          </div>
+        ) : (
+          <>
+            {tab === 'precificacao' && (
+              <PrecificacaoTab
+                produtos={produtos}
+                setProdutos={setProdutos}
+                loadingProdutos={loadingProdutos}
+              />
+            )}
+            {tab === 'vendas' && (
+              <VendasTab
+                produtos={produtos}
+                setProdutos={setProdutos}
+                loadingProdutos={loadingProdutos}
+              />
+            )}
+          </>
+        )}
       </main>
     </div>
   );

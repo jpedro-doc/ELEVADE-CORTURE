@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Trash2, Plus, TrendingUp, Target, DollarSign, BarChart2 } from 'lucide-react';
+import { Trash2, Plus, TrendingUp, Target, DollarSign, BarChart2, Pencil, Check, X } from 'lucide-react';
 import {
-  fetchProdutos, createProduto, updateProduto, deleteProduto,
+  createProduto, deleteProduto, updateProduto,
   fetchMetaMensal, saveMetaMensal,
   type Produto,
 } from '@/services/produtoService';
+import { fetchVendas } from '@/services/vendasService';
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 
@@ -47,6 +48,8 @@ const inputCls = [
   'placeholder:text-[#2a2a2a] focus:border-[#666] focus:outline-none transition-colors',
 ].join(' ');
 
+const editInputCls = 'bg-[#111] border border-[#3a3a3a] px-3 py-1.5 text-sm text-[#e8e8e8] focus:border-[#666] focus:outline-none';
+
 /* ─── KPI Card ───────────────────────────────────────────────────────────── */
 
 const KpiCard: React.FC<{ label: string; value: string; sub?: string; icon?: React.ReactNode }> = ({ label: l, value, sub, icon }) => (
@@ -73,26 +76,43 @@ const SectionHeader: React.FC<{ title: string; subtitle?: string }> = ({ title, 
 
 /* ─── Main ───────────────────────────────────────────────────────────────── */
 
-const PrecificacaoTab: React.FC = () => {
-  const [produtos, setProdutos] = useState<Produto[]>([]);
+interface Props {
+  produtos: Produto[];
+  setProdutos: React.Dispatch<React.SetStateAction<Produto[]>>;
+  loadingProdutos: boolean;
+}
+
+const PrecificacaoTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) => {
   const [metaMensal, setMetaMensal] = useState<number>(0);
   const [metaInput, setMetaInput] = useState<string>('');
+  const [lucroRealMes, setLucroRealMes] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [dbError, setDbError] = useState('');
 
   const [nome, setNome]             = useState('');
   const [precoCusto, setPrecoCusto] = useState('');
   const [metaVendaInput, setMetaVendaInput] = useState('');
-  const [precoVenda, setPrecoVenda] = useState('');
   const [error, setError]           = useState('');
-  const [editVenda, setEditVenda]   = useState<Record<string, string>>({});
+
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editNome, setEditNome] = useState('');
+  const [editCusto, setEditCusto] = useState('');
+  const [editMetaVenda, setEditMetaVenda] = useState('');
+  const [editError, setEditError] = useState('');
 
   useEffect(() => {
-    Promise.all([fetchProdutos(), fetchMetaMensal()])
-      .then(([prods, meta]) => {
-        setProdutos(prods);
+    const inicioMes = new Date();
+    inicioMes.setDate(1);
+    inicioMes.setHours(0, 0, 0, 0);
+
+    Promise.all([fetchMetaMensal(), fetchVendas()])
+      .then(([meta, vendas]) => {
         setMetaMensal(meta);
         if (meta > 0) setMetaInput(String(meta));
+        const lucro = vendas
+          .filter(v => new Date(v.created_at) >= inicioMes)
+          .reduce((s, v) => s + (v.preco_venda - v.preco_custo) * v.quantidade, 0);
+        setLucroRealMes(lucro);
       })
       .catch(err => setDbError(String(err?.message ?? err)))
       .finally(() => setLoading(false));
@@ -112,32 +132,17 @@ const PrecificacaoTab: React.FC = () => {
   const handleAdd = async () => {
     const custo = parseFloat(precoCusto.replace(',', '.'));
     const metaV = metaVendaInput ? parseFloat(metaVendaInput.replace(',', '.')) : null;
-    const venda = precoVenda ? parseFloat(precoVenda.replace(',', '.')) : null;
     if (!nome.trim())                    { setError('Nome obrigatório.'); return; }
     if (!custo || custo <= 0)            { setError('Custo inválido.'); return; }
     if (metaV !== null && metaV < custo) { setError('Meta de venda não pode ser menor que o custo.'); return; }
-    if (venda !== null && venda <= 0)    { setError('Preço de venda inválido.'); return; }
-    if (venda !== null && venda < custo) { setError('Venda não pode ser menor que o custo.'); return; }
     setError('');
     try {
-      const novo = await createProduto({ nome: nome.trim(), precoCusto: custo, metaVenda: metaV, precoVenda: venda });
+      const novo = await createProduto({ nome: nome.trim(), precoCusto: custo, metaVenda: metaV, precoVenda: null });
       setProdutos(prev => [novo, ...prev]);
-      setNome(''); setPrecoCusto(''); setMetaVendaInput(''); setPrecoVenda('');
+      setNome(''); setPrecoCusto(''); setMetaVendaInput('');
     } catch {
       setError('Erro ao salvar produto. Verifique a conexão.');
     }
-  };
-
-  const salvarVenda = async (id: string) => {
-    const raw = editVenda[id];
-    if (!raw) return;
-    const v = parseFloat(raw.replace(',', '.'));
-    if (!v || v <= 0) return;
-    const produto = produtos.find(p => p.id === id);
-    if (!produto || v < produto.precoCusto) return;
-    await updateProduto(id, { precoVenda: v });
-    setProdutos(prev => prev.map(p => p.id === id ? { ...p, precoVenda: v } : p));
-    setEditVenda(prev => { const n = { ...prev }; delete n[id]; return n; });
   };
 
   const remove = async (id: string) => {
@@ -146,6 +151,33 @@ const PrecificacaoTab: React.FC = () => {
       setProdutos(prev => prev.filter(p => p.id !== id));
     } catch {
       setError('Erro ao remover produto. Verifique a conexão.');
+    }
+  };
+
+  const startEdit = (p: Produto) => {
+    setEditId(p.id);
+    setEditNome(p.nome);
+    setEditCusto(String(p.precoCusto));
+    setEditMetaVenda(p.metaVenda !== null ? String(p.metaVenda) : '');
+    setEditError('');
+  };
+
+  const cancelEdit = () => { setEditId(null); setEditError(''); };
+
+  const saveEdit = async () => {
+    if (!editId) return;
+    const custo = parseFloat(editCusto.replace(',', '.'));
+    const metaV = editMetaVenda ? parseFloat(editMetaVenda.replace(',', '.')) : null;
+    if (!editNome.trim())                { setEditError('Nome obrigatório.'); return; }
+    if (!custo || custo <= 0)            { setEditError('Custo inválido.'); return; }
+    if (metaV !== null && metaV < custo) { setEditError('Meta de venda não pode ser menor que o custo.'); return; }
+    try {
+      await updateProduto(editId!, { nome: editNome.trim(), precoCusto: custo, metaVenda: metaV });
+      setProdutos(prev => prev.map(p => p.id === editId ? { ...p, nome: editNome.trim(), precoCusto: custo, metaVenda: metaV } : p));
+      setEditId(null);
+      setEditError('');
+    } catch {
+      setEditError('Erro ao salvar. Verifique a conexão.');
     }
   };
 
@@ -166,7 +198,7 @@ const PrecificacaoTab: React.FC = () => {
     return validos.length ? validos.reduce((a, b) => (a.margemReal ?? a.margemPlanejada ?? 0) > (b.margemReal ?? b.margemPlanejada ?? 0) ? a : b) : null;
   }, [rowsComPreco]);
 
-  if (loading) return (
+  if (loading || loadingProdutos) return (
     <div className="max-w-6xl mx-auto py-24 text-center">
       <p className="text-[10px] tracking-[0.3em] uppercase text-[#333] font-medium">Carregando...</p>
     </div>
@@ -248,13 +280,8 @@ const PrecificacaoTab: React.FC = () => {
           <div>
             <label className={labelCls}>Meta de Venda — R$ <span className="text-[#333] normal-case tracking-normal">(opcional)</span></label>
             <input className={inputCls} type="number" min="0" step="0.01"
-              value={metaVendaInput} onChange={e => setMetaVendaInput(e.target.value)} placeholder="Preço alvo" />
-          </div>
-          <div className="lg:col-span-2">
-            <label className={labelCls}>Venda Real — R$ <span className="text-[#333] normal-case tracking-normal">(opcional)</span></label>
-            <input className={inputCls} type="number" min="0" step="0.01"
-              value={precoVenda} onChange={e => setPrecoVenda(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleAdd()} placeholder="Por quanto foi vendido" />
+              value={metaVendaInput} onChange={e => setMetaVendaInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAdd()} placeholder="Preço alvo" />
           </div>
         </div>
 
@@ -292,9 +319,10 @@ const PrecificacaoTab: React.FC = () => {
           {/* ════ KPIs ════ */}
           <section className="mb-14">
             <SectionHeader title="Métricas da Loja" subtitle={metaMensal > 0 ? `Meta mensal: ${fmt(metaMensal)}` : 'Defina a meta mensal para ver projeções'} />
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <KpiCard label="Meta Mensal" value={metaMensal > 0 ? fmtK(metaMensal) : '—'} sub="faturamento alvo / mês" icon={<Target size={18} />} />
               <KpiCard label="Lucro Projetado" value={fmtK(totalLucroMeta)} sub="se a meta for atingida" icon={<TrendingUp size={18} />} />
+              <KpiCard label="Lucro Real" value={fmtK(lucroRealMes)} sub="vendas deste mês" icon={<DollarSign size={18} />} />
               <KpiCard label="Margem Média" value={pct(margemMedia)} sub="média entre produtos" icon={<BarChart2 size={18} />} />
               <KpiCard label="Melhor Produto" value={melhorProduto ? pct(melhorProduto.margemReal ?? melhorProduto.margemPlanejada ?? 0) : '—'} sub={melhorProduto?.nome ?? ''} icon={<DollarSign size={18} />} />
             </div>
@@ -307,15 +335,56 @@ const PrecificacaoTab: React.FC = () => {
               <table className="w-full min-w-[780px] border-collapse">
                 <thead>
                   <tr style={{ borderBottom: BORDER_STRONG }}>
-                    {['Produto', 'Custo', 'Meta Venda', 'Venda Real', 'Lucro / un', 'Margem', 'Markup', 'Un. p/ Meta', 'Lucro s/ Meta', ''].map(h => (
+                    {['Produto', 'Custo', 'Meta Venda', 'Lucro / un', 'Margem', 'Markup', ''].map(h => (
                       <th key={h} className="text-left text-[9px] tracking-[0.22em] uppercase text-[#444] font-medium pb-3 pr-5">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map(p => {
-                    const semVenda = p.precoVenda === null;
-                    const editing = editVenda[p.id] !== undefined;
+                    const isEditing = editId === p.id;
+                    if (isEditing) return (
+                      <tr key={p.id} style={{ borderBottom: BORDER }} className="bg-[#0d0d0d]">
+                        <td className="py-3 pr-3">
+                          <input
+                            className={`w-full ${editInputCls}`}
+                            value={editNome} onChange={e => setEditNome(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
+                            autoFocus
+                          />
+                        </td>
+                        <td className="py-3 pr-3">
+                          <input
+                            className={`w-28 font-mono ${editInputCls}`}
+                            type="number" min="0" step="0.01"
+                            value={editCusto} onChange={e => setEditCusto(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
+                          />
+                        </td>
+                        <td className="py-3 pr-3">
+                          <input
+                            className={`w-28 font-mono ${editInputCls}`}
+                            type="number" min="0" step="0.01"
+                            value={editMetaVenda} onChange={e => setEditMetaVenda(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
+                            placeholder="—"
+                          />
+                        </td>
+                        <td className="py-3 pr-5 font-mono text-sm text-[#444]" colSpan={3}>
+                          {editError && <span className="text-[11px] text-[#666] tracking-wide">{editError}</span>}
+                        </td>
+                        <td className="py-3">
+                          <div className="flex items-center gap-2">
+                            <button onClick={saveEdit} className="text-[#555] hover:text-[#aaa] transition-colors p-1">
+                              <Check size={13} strokeWidth={2} />
+                            </button>
+                            <button onClick={cancelEdit} className="text-[#333] hover:text-[#666] transition-colors p-1">
+                              <X size={13} strokeWidth={2} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
                     return (
                     <tr key={p.id} style={{ borderBottom: BORDER }} className="group hover:bg-[#0d0d0d] transition-colors">
                       <td className="py-4 pr-5">
@@ -326,38 +395,6 @@ const PrecificacaoTab: React.FC = () => {
 
                       <td className="py-4 pr-5 font-mono text-sm text-[#666] font-medium">
                         {p.metaVenda !== null ? fmt(p.metaVenda) : <span className="text-[#2a2a2a]">—</span>}
-                      </td>
-
-                      {/* Venda Real — inline edit */}
-                      <td className="py-3 pr-5">
-                        {semVenda || editing ? (
-                          <div className="flex items-center gap-2">
-                            <input
-                              style={{ border: '1px solid #3a3a3a' }}
-                              className="bg-[#0c0c0c] px-2 py-1.5 w-28 text-sm font-mono text-[#e8e8e8] font-medium focus:border-[#666] focus:outline-none"
-                              type="number" min="0" step="0.01"
-                              placeholder="0.00"
-                              autoFocus={editing}
-                              value={editVenda[p.id] ?? ''}
-                              onChange={e => setEditVenda(prev => ({ ...prev, [p.id]: e.target.value }))}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') salvarVenda(p.id);
-                                if (e.key === 'Escape') setEditVenda(prev => { const n = { ...prev }; delete n[p.id]; return n; });
-                              }}
-                            />
-                            <button onClick={() => salvarVenda(p.id)}
-                              className="text-[10px] tracking-[0.15em] uppercase text-[#555] hover:text-[#aaa] transition-colors font-medium">
-                              ok
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setEditVenda(prev => ({ ...prev, [p.id]: String(p.precoVenda) }))}
-                            className="font-mono text-sm text-[#aaa] font-medium hover:text-[#e8e8e8] transition-colors text-left"
-                          >
-                            {fmt(p.precoVenda!)}
-                          </button>
-                        )}
                       </td>
 
                       <td className="py-4 pr-5 font-mono text-sm text-[#e0e0e0] font-medium">
@@ -381,17 +418,15 @@ const PrecificacaoTab: React.FC = () => {
                             ? <span className="text-[#444]">{pct(p.markupPlanejado)}</span>
                             : <span className="text-[#2a2a2a]">—</span>}
                       </td>
-                      <td className="py-4 pr-5 font-mono text-sm text-[#e8e8e8] font-bold tracking-tight">
-                        {metaMensal > 0 && p.unidades !== null ? p.unidades : <span className="text-[#2a2a2a]">—</span>}
-                      </td>
-                      <td className="py-4 pr-5 font-mono text-sm text-[#aaa] font-medium">
-                        {metaMensal > 0 && p.lucroMeta !== null ? fmt(p.lucroMeta) : <span className="text-[#2a2a2a]">—</span>}
-                      </td>
                       <td className="py-4">
-                        <button onClick={() => remove(p.id)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-[#333] hover:text-[#888] p-1">
-                          <Trash2 size={13} strokeWidth={2} />
-                        </button>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => startEdit(p)} className="text-[#333] hover:text-[#888] transition-colors p-1">
+                            <Pencil size={13} strokeWidth={2} />
+                          </button>
+                          <button onClick={() => remove(p.id)} className="text-[#333] hover:text-[#888] transition-colors p-1">
+                            <Trash2 size={13} strokeWidth={2} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     );

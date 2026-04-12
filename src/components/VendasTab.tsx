@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Trash2, Plus, ShoppingBag, TrendingUp, DollarSign, Package } from 'lucide-react';
 import { fetchVendas, createVenda, deleteVenda, type Venda } from '@/services/vendasService';
-import { fetchProdutos, type Produto } from '@/services/produtoService';
+import { createProduto, updateProduto, type Produto } from '@/services/produtoService';
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 
@@ -26,6 +26,10 @@ function fmtDataHora(iso: string) {
   const d = new Date(iso);
   return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
+
+/* ─── Constants ─────────────────────────────────────────────────────────── */
+
+const MANUAL_ID = '__manual__';
 
 /* ─── Shared Styles ──────────────────────────────────────────────────────── */
 
@@ -68,9 +72,14 @@ const PeriodHeader: React.FC<{ title: string }> = ({ title }) => (
 
 /* ─── Main ───────────────────────────────────────────────────────────────── */
 
-const VendasTab: React.FC = () => {
-  const [vendas, setVendas]     = useState<Venda[]>([]);
-  const [produtos, setProdutos] = useState<Produto[]>([]);
+interface Props {
+  produtos: Produto[];
+  setProdutos: React.Dispatch<React.SetStateAction<Produto[]>>;
+  loadingProdutos: boolean;
+}
+
+const VendasTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) => {
+  const [vendas, setVendas] = useState<Venda[]>([]);
   const [loading, setLoading]   = useState(true);
   const [dbError, setDbError]   = useState('');
   const [error, setError]       = useState('');
@@ -83,8 +92,8 @@ const VendasTab: React.FC = () => {
   const [precoCusto, setPrecoCusto]     = useState('');
 
   useEffect(() => {
-    Promise.all([fetchVendas(), fetchProdutos()])
-      .then(([vs, ps]) => { setVendas(vs); setProdutos(ps); })
+    fetchVendas()
+      .then(setVendas)
       .catch(err => setDbError(String(err?.message ?? err)))
       .finally(() => setLoading(false));
   }, []);
@@ -92,7 +101,7 @@ const VendasTab: React.FC = () => {
   // Ao selecionar produto, preenche preços automaticamente
   const handleSelectProduto = (id: string) => {
     setProdutoId(id);
-    if (!id) { setPrecoVenda(''); setPrecoCusto(''); return; }
+    if (!id || id === MANUAL_ID) { setPrecoVenda(''); setPrecoCusto(''); return; }
     const p = produtos.find(p => p.id === id);
     if (!p) return;
     setPrecoVenda(String(p.precoVenda ?? p.metaVenda ?? ''));
@@ -100,12 +109,13 @@ const VendasTab: React.FC = () => {
   };
 
   const handleAdd = async () => {
+    const isManual = !produtoId || produtoId === MANUAL_ID;
     const qtd   = parseInt(quantidade);
     const pv    = parseFloat(precoVenda.replace(',', '.'));
     const pc    = parseFloat(precoCusto.replace(',', '.'));
-    const nome  = produtoId
-      ? (produtos.find(p => p.id === produtoId)?.nome ?? '')
-      : nomeManual.trim();
+    const nome  = isManual
+      ? nomeManual.trim()
+      : (produtos.find(p => p.id === produtoId)?.nome ?? '');
 
     if (!nome)              { setError('Selecione ou informe o produto.'); return; }
     if (!qtd || qtd <= 0)  { setError('Quantidade inválida.'); return; }
@@ -115,8 +125,17 @@ const VendasTab: React.FC = () => {
 
     setError('');
     try {
+      let idFinal = (produtoId && produtoId !== MANUAL_ID) ? produtoId : null;
+
+      // Produto não cadastrado: cria no catálogo automaticamente
+      if (isManual) {
+        const novoProduto = await createProduto({ nome, precoCusto: pc, metaVenda: null, precoVenda: pv });
+        idFinal = novoProduto.id;
+        setProdutos(prev => [novoProduto, ...prev]);
+      }
+
       const nova = await createVenda({
-        produto_id:   produtoId || null,
+        produto_id:   idFinal,
         produto_nome: nome,
         quantidade:   qtd,
         preco_venda:  pv,
@@ -130,23 +149,33 @@ const VendasTab: React.FC = () => {
   };
 
   const remove = async (id: string) => {
+    const venda = vendas.find(v => v.id === id);
     try {
-      await deleteVenda(id);
+      await Promise.all([
+        deleteVenda(id),
+        venda?.produto_id ? updateProduto(venda.produto_id, { precoVenda: null }) : Promise.resolve(),
+      ]);
       setVendas(prev => prev.filter(v => v.id !== id));
+      if (venda?.produto_id) {
+        setProdutos(prev => prev.map(p => p.id === venda.produto_id ? { ...p, precoVenda: null } : p));
+      }
     } catch {
       setError('Erro ao remover venda.');
     }
   };
 
   /* ── Métricas ── */
-  const now   = new Date();
-  const hoje  = startOfDay(now);
-  const semana = startOfWeek(now);
-  const mes   = startOfMonth(now);
-
-  const vendas_hoje   = useMemo(() => vendas.filter(v => new Date(v.created_at) >= hoje),   [vendas]);
-  const vendas_semana = useMemo(() => vendas.filter(v => new Date(v.created_at) >= semana), [vendas]);
-  const vendas_mes    = useMemo(() => vendas.filter(v => new Date(v.created_at) >= mes),    [vendas]);
+  const { vendas_hoje, vendas_semana, vendas_mes } = useMemo(() => {
+    const now = new Date();
+    const t_hoje   = startOfDay(now);
+    const t_semana = startOfWeek(now);
+    const t_mes    = startOfMonth(now);
+    return {
+      vendas_hoje:   vendas.filter(v => new Date(v.created_at) >= t_hoje),
+      vendas_semana: vendas.filter(v => new Date(v.created_at) >= t_semana),
+      vendas_mes:    vendas.filter(v => new Date(v.created_at) >= t_mes),
+    };
+  }, [vendas]);
 
   function soma(vs: Venda[]) {
     return vs.reduce((acc, v) => ({
@@ -160,7 +189,7 @@ const VendasTab: React.FC = () => {
   const mSemana = useMemo(() => soma(vendas_semana), [vendas_semana]);
   const mMes    = useMemo(() => soma(vendas_mes),    [vendas_mes]);
 
-  if (loading) return (
+  if (loading || loadingProdutos) return (
     <div className="max-w-6xl mx-auto py-24 text-center">
       <p className="text-[10px] tracking-[0.3em] uppercase text-[#333] font-medium">Carregando...</p>
     </div>
@@ -211,7 +240,7 @@ const VendasTab: React.FC = () => {
                 onChange={e => setNomeManual(e.target.value)}
                 placeholder="Nome do produto" />
             )}
-            {(produtoId === '__manual__' || (produtos.length > 0 && !produtoId)) && (
+            {produtoId === MANUAL_ID && (
               <input className={inputCls + ' mt-2'} value={nomeManual}
                 onChange={e => setNomeManual(e.target.value)}
                 placeholder="Nome do produto" />
@@ -392,7 +421,7 @@ const VendasTab: React.FC = () => {
                       </td>
                       <td className="py-4">
                         <button onClick={() => remove(v.id)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-[#333] hover:text-[#888] p-1">
+                          className="opacity-30 hover:opacity-100 transition-opacity text-[#666] hover:text-[#e8e8e8] p-1">
                           <Trash2 size={13} strokeWidth={2} />
                         </button>
                       </td>
