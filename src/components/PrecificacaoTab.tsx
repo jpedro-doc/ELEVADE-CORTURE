@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Trash2, Plus, TrendingUp, Target, DollarSign, BarChart2, Pencil, Check, X } from 'lucide-react';
+import { Trash2, Plus, TrendingUp, Target, DollarSign, BarChart2, Pencil, Check, X, PackagePlus } from 'lucide-react';
 import {
   createProduto, deleteProduto, updateProduto,
   fetchMetaMensal, saveMetaMensal,
@@ -151,6 +151,15 @@ const PrecificacaoTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdut
       setProdutos(prev => prev.filter(p => p.id !== id));
     } catch {
       setError('Erro ao remover produto. Verifique a conexão.');
+    }
+  };
+
+  const addToEstoque = async (id: string) => {
+    try {
+      await updateProduto(id, { emEstoque: true });
+      setProdutos(prev => prev.map(p => p.id === id ? { ...p, emEstoque: true } : p));
+    } catch {
+      setError('Erro ao adicionar ao estoque.');
     }
   };
 
@@ -419,13 +428,24 @@ const PrecificacaoTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdut
                             : <span className="text-[#999]">—</span>}
                       </td>
                       <td className="py-4">
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => startEdit(p)} className="text-[#aaa] hover:text-[#888] transition-colors p-1">
-                            <Pencil size={13} strokeWidth={2} />
-                          </button>
-                          <button onClick={() => remove(p.id)} className="text-[#aaa] hover:text-[#888] transition-colors p-1">
-                            <Trash2 size={13} strokeWidth={2} />
-                          </button>
+                        <div className="flex items-center gap-1">
+                          {!p.emEstoque && (
+                            <button
+                              onClick={() => addToEstoque(p.id)}
+                              title="Adicionar ao estoque"
+                              className="opacity-40 hover:opacity-100 transition-opacity text-[#888] hover:text-[#e0e0e0] p-1"
+                            >
+                              <PackagePlus size={13} strokeWidth={2} />
+                            </button>
+                          )}
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => startEdit(p)} className="text-[#aaa] hover:text-[#e0e0e0] transition-colors p-1">
+                              <Pencil size={13} strokeWidth={2} />
+                            </button>
+                            <button onClick={() => remove(p.id)} className="text-[#aaa] hover:text-[#e0e0e0] transition-colors p-1">
+                              <Trash2 size={13} strokeWidth={2} />
+                            </button>
+                          </div>
                         </div>
                       </td>
                     </tr>
