@@ -124,27 +124,34 @@ const VendasTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) 
     if (pv < pc)           { setError('Preço de venda não pode ser menor que o custo.'); return; }
 
     setError('');
-    try {
-      const idFinal = isManual ? null : produtoId;
+    const idFinal = isManual ? null : produtoId;
 
-      const nova = await createVenda({
+    let nova;
+    try {
+      nova = await createVenda({
         produto_id:   idFinal,
         produto_nome: nome,
         quantidade:   qtd,
         preco_venda:  pv,
         preco_custo:  pc,
       });
-      setVendas(prev => [nova, ...prev]);
-
-      // Marca como fora de estoque após vender
-      if (!isManual && produtoId) {
-        await updateProduto(produtoId, { emEstoque: false });
-        setProdutos(prev => prev.map(p => p.id === produtoId ? { ...p, emEstoque: false } : p));
-      }
-
-      setProdutoId(''); setNomeManual(''); setQuantidade('1'); setPrecoVenda(''); setPrecoCusto('');
     } catch {
       setError('Erro ao registrar venda. Verifique a conexão.');
+      return;
+    }
+
+    setVendas(prev => [nova!, ...prev]);
+    setProdutoId(''); setNomeManual(''); setQuantidade('1'); setPrecoVenda(''); setPrecoCusto('');
+
+    // Marca como fora de estoque após vender
+    if (!isManual && idFinal) {
+      try {
+        await updateProduto(idFinal, { emEstoque: false });
+        setProdutos(prev => prev.map(p => p.id === idFinal ? { ...p, emEstoque: false } : p));
+      } catch (err) {
+        console.error('Erro ao atualizar estoque:', err);
+        setError('Venda registrada, mas erro ao atualizar estoque. Verifique a conexão.');
+      }
     }
   };
 
