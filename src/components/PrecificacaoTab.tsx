@@ -94,6 +94,8 @@ const PrecificacaoTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdut
   const [metaVendaInput, setMetaVendaInput] = useState('');
   const [error, setError]           = useState('');
 
+  const [showVendidos, setShowVendidos] = useState(false);
+
   const [editId, setEditId] = useState<string | null>(null);
   const [editNome, setEditNome] = useState('');
   const [editCusto, setEditCusto] = useState('');
@@ -154,12 +156,12 @@ const PrecificacaoTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdut
     }
   };
 
-  const addToEstoque = async (id: string) => {
+  const restaurar = async (id: string) => {
     try {
       await updateProduto(id, { emEstoque: true });
       setProdutos(prev => prev.map(p => p.id === id ? { ...p, emEstoque: true } : p));
     } catch {
-      setError('Erro ao adicionar ao estoque.');
+      setError('Erro ao restaurar produto.');
     }
   };
 
@@ -339,7 +341,29 @@ const PrecificacaoTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdut
 
           {/* ════ TABLE ════ */}
           <section>
-            <SectionHeader title="Análise Detalhada" subtitle="Todos os indicadores por produto" />
+            <div style={{ borderBottom: BORDER_STRONG }} className="mb-8 pb-4 flex items-end justify-between">
+              <div>
+                <h3 style={{ fontFamily: 'Poppins, sans-serif', fontSize: '1.1rem', fontWeight: 200, letterSpacing: '0.2em' }}
+                  className="text-[#d8d8d8] uppercase">Análise Detalhada</h3>
+                <p className="text-[10px] text-[#aaa] tracking-[0.18em] mt-2 font-medium uppercase">
+                  {showVendidos ? 'Produtos vendidos' : 'Produtos disponíveis'}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowVendidos(v => !v)}
+                style={{ border: showVendidos ? '1px solid #666' : '1px solid #2a2a2a' }}
+                className={`px-3 py-1.5 text-[9px] tracking-[0.2em] uppercase font-medium transition-all ${showVendidos ? 'text-[#e0e0e0]' : 'text-[#888] hover:border-[#555] hover:text-[#bbb]'}`}
+              >
+                {showVendidos ? 'Ver disponíveis' : 'Ver vendidos'}
+              </button>
+            </div>
+            {rows.filter(p => showVendidos ? !p.emEstoque : p.emEstoque).length === 0 && (
+              <div style={{ border: BORDER }} className="py-16 text-center">
+                <p className="text-[10px] tracking-[0.22em] uppercase text-[#666] font-medium">
+                  {showVendidos ? 'Nenhum produto vendido' : 'Nenhum produto disponível'}
+                </p>
+              </div>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full min-w-[780px] border-collapse">
                 <thead>
@@ -350,7 +374,7 @@ const PrecificacaoTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdut
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map(p => {
+                  {rows.filter(p => showVendidos ? !p.emEstoque : p.emEstoque).map(p => {
                     const isEditing = editId === p.id;
                     if (isEditing) return (
                       <tr key={p.id} style={{ borderBottom: BORDER }} className="bg-[#0d0d0d]">
@@ -428,24 +452,25 @@ const PrecificacaoTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdut
                             : <span className="text-[#999]">—</span>}
                       </td>
                       <td className="py-4">
-                        <div className="flex items-center gap-1">
-                          {!p.emEstoque && (
+                        <div className="flex items-center gap-2">
+                          {showVendidos ? (
                             <button
-                              onClick={() => addToEstoque(p.id)}
+                              onClick={() => restaurar(p.id)}
                               style={{ border: '1px solid #3a3a3a' }}
                               className="px-2 py-1 text-[9px] tracking-[0.18em] uppercase text-[#bbb] hover:border-[#666] hover:text-[#e0e0e0] transition-all font-medium whitespace-nowrap"
                             >
-                              + estoque
+                              ↩ restaurar
                             </button>
+                          ) : (
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => startEdit(p)} className="text-[#aaa] hover:text-[#e0e0e0] transition-colors p-1">
+                                <Pencil size={13} strokeWidth={2} />
+                              </button>
+                              <button onClick={() => remove(p.id)} className="text-[#aaa] hover:text-[#e0e0e0] transition-colors p-1">
+                                <Trash2 size={13} strokeWidth={2} />
+                              </button>
+                            </div>
                           )}
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => startEdit(p)} className="text-[#aaa] hover:text-[#e0e0e0] transition-colors p-1">
-                              <Pencil size={13} strokeWidth={2} />
-                            </button>
-                            <button onClick={() => remove(p.id)} className="text-[#aaa] hover:text-[#e0e0e0] transition-colors p-1">
-                              <Trash2 size={13} strokeWidth={2} />
-                            </button>
-                          </div>
                         </div>
                       </td>
                     </tr>
