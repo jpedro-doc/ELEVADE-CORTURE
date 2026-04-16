@@ -40,12 +40,12 @@ function calc(p: Produto, metaMensal: number) {
 const BORDER        = '1px solid #2a2a2a';
 const BORDER_STRONG = '1px solid #3a3a3a';
 
-const labelCls = 'block text-[10px] tracking-[0.2em] uppercase text-[#666] mb-2 font-medium';
+const labelCls = 'block text-[10px] tracking-[0.2em] uppercase text-[#aaa] mb-2 font-medium';
 
 const inputCls = [
   'w-full bg-[#0c0c0c] border border-[#2a2a2a] px-4 py-3',
   'text-sm text-[#e8e8e8] font-medium tracking-wide',
-  'placeholder:text-[#2a2a2a] focus:border-[#666] focus:outline-none transition-colors',
+  'placeholder:text-[#999] focus:border-[#666] focus:outline-none transition-colors',
 ].join(' ');
 
 const editInputCls = 'bg-[#111] border border-[#3a3a3a] px-3 py-1.5 text-sm text-[#e8e8e8] focus:border-[#666] focus:outline-none';
@@ -55,12 +55,12 @@ const editInputCls = 'bg-[#111] border border-[#3a3a3a] px-3 py-1.5 text-sm text
 const KpiCard: React.FC<{ label: string; value: string; sub?: string; icon?: React.ReactNode }> = ({ label: l, value, sub, icon }) => (
   <div style={{ border: BORDER }} className="p-6 bg-[#070707]">
     <div className="flex items-start justify-between mb-4">
-      <p className="text-[9px] tracking-[0.28em] uppercase text-[#444] font-medium">{l}</p>
-      {icon && <span className="text-[#252525]">{icon}</span>}
+      <p className="text-[9px] tracking-[0.28em] uppercase text-[#888] font-medium">{l}</p>
+      {icon && <span className="text-[#999]">{icon}</span>}
     </div>
     <p style={{ fontFamily: 'Poppins, sans-serif', fontSize: '1.7rem', fontWeight: 200, letterSpacing: '0.04em', lineHeight: 1 }}
       className="text-[#e0e0e0] mb-2">{value}</p>
-    {sub && <p className="text-[10px] text-[#3a3a3a] font-medium tracking-[0.12em] mt-2 uppercase">{sub}</p>}
+    {sub && <p className="text-[10px] text-[#aaa] font-medium tracking-[0.12em] mt-2 uppercase">{sub}</p>}
   </div>
 );
 
@@ -69,8 +69,8 @@ const KpiCard: React.FC<{ label: string; value: string; sub?: string; icon?: Rea
 const SectionHeader: React.FC<{ title: string; subtitle?: string }> = ({ title, subtitle }) => (
   <div style={{ borderBottom: BORDER_STRONG }} className="mb-8 pb-4">
     <h3 style={{ fontFamily: 'Poppins, sans-serif', fontSize: '1.1rem', fontWeight: 200, letterSpacing: '0.2em' }}
-      className="text-[#c0c0c0] uppercase">{title}</h3>
-    {subtitle && <p className="text-[10px] text-[#3a3a3a] tracking-[0.18em] mt-2 font-medium uppercase">{subtitle}</p>}
+      className="text-[#d8d8d8] uppercase">{title}</h3>
+    {subtitle && <p className="text-[10px] text-[#aaa] tracking-[0.18em] mt-2 font-medium uppercase">{subtitle}</p>}
   </div>
 );
 
@@ -200,14 +200,14 @@ const PrecificacaoTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdut
 
   if (loading || loadingProdutos) return (
     <div className="max-w-6xl mx-auto py-24 text-center">
-      <p className="text-[10px] tracking-[0.3em] uppercase text-[#333] font-medium">Carregando...</p>
+      <p className="text-[10px] tracking-[0.3em] uppercase text-[#aaa] font-medium">Carregando...</p>
     </div>
   );
 
   if (dbError) return (
     <div className="max-w-6xl mx-auto py-24 text-center space-y-3">
-      <p className="text-[10px] tracking-[0.3em] uppercase text-[#666] font-medium">Erro de conexão com o banco</p>
-      <p className="font-mono text-xs text-[#444] max-w-lg mx-auto break-words">{dbError}</p>
+      <p className="text-[10px] tracking-[0.3em] uppercase text-[#aaa] font-medium">Erro de conexão com o banco</p>
+      <p className="font-mono text-xs text-[#888] max-w-lg mx-auto break-words">{dbError}</p>
     </div>
   );
 
@@ -218,14 +218,14 @@ const PrecificacaoTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdut
       <section style={{ borderBottom: BORDER_STRONG }} className="mb-14 pb-10">
         <div className="flex items-end justify-between mb-6">
           <div>
-            <p className="text-[10px] tracking-[0.22em] uppercase text-[#555] font-medium mb-1">Meta Mensal da Loja</p>
+            <p className="text-[10px] tracking-[0.22em] uppercase text-[#999] font-medium mb-1">Meta Mensal da Loja</p>
             <p style={{ fontFamily: 'Poppins, sans-serif', fontSize: '1.1rem', fontWeight: 400, letterSpacing: '0.04em' }}
-              className="text-[#444] italic">
+              className="text-[#888] italic">
               {metaMensal > 0 ? `Objetivo: ${fmt(metaMensal)} / mês` : 'Defina o faturamento alvo para o mês'}
             </p>
           </div>
           {metaMensal > 0 && (
-            <span style={{ border: BORDER }} className="text-[10px] tracking-[0.2em] uppercase text-[#555] px-3 py-1.5 font-medium">
+            <span style={{ border: BORDER }} className="text-[10px] tracking-[0.2em] uppercase text-[#999] px-3 py-1.5 font-medium">
               Meta ativa
             </span>
           )}
@@ -256,10 +256,10 @@ const PrecificacaoTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdut
       <section style={{ borderBottom: BORDER_STRONG }} className="mb-14 pb-14">
         <div className="flex items-end justify-between mb-8">
           <h2 style={{ fontFamily: 'Poppins, sans-serif', fontSize: '0.65rem', fontWeight: 500, letterSpacing: '0.32em' }}
-            className="text-[#555] uppercase">
+            className="text-[#999] uppercase">
             Cadastro de Produto
           </h2>
-          <span className="text-[10px] tracking-[0.22em] uppercase text-[#444] font-medium">
+          <span className="text-[10px] tracking-[0.22em] uppercase text-[#888] font-medium">
             {produtos.length} {produtos.length === 1 ? 'produto' : 'produtos'}
           </span>
         </div>
@@ -278,7 +278,7 @@ const PrecificacaoTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdut
               value={precoCusto} onChange={e => setPrecoCusto(e.target.value)} placeholder="0.00" />
           </div>
           <div>
-            <label className={labelCls}>Meta de Venda — R$ <span className="text-[#333] normal-case tracking-normal">(opcional)</span></label>
+            <label className={labelCls}>Meta de Venda — R$ <span className="text-[#aaa] normal-case tracking-normal">(opcional)</span></label>
             <input className={inputCls} type="number" min="0" step="0.01"
               value={metaVendaInput} onChange={e => setMetaVendaInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAdd()} placeholder="Preço alvo" />
@@ -295,7 +295,7 @@ const PrecificacaoTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdut
         </button>
 
         {error && (
-          <p style={{ borderLeft: '2px solid #3a3a3a' }} className="text-[11px] tracking-[0.1em] text-[#666] pl-4 py-1 font-medium mt-4">
+          <p style={{ borderLeft: '2px solid #3a3a3a' }} className="text-[11px] tracking-[0.1em] text-[#aaa] pl-4 py-1 font-medium mt-4">
             {error}
           </p>
         )}
@@ -305,10 +305,10 @@ const PrecificacaoTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdut
       {produtos.length === 0 && (
         <div style={{ border: BORDER }} className="py-24 text-center">
           <p style={{ fontFamily: 'Poppins, sans-serif', fontSize: '1.5rem', fontWeight: 400, letterSpacing: '0.1em' }}
-            className="text-[#2a2a2a] italic">
+            className="text-[#999] italic">
             Nenhum produto cadastrado
           </p>
-          <p className="text-[10px] tracking-[0.22em] uppercase text-[#2a2a2a] mt-3 font-medium">
+          <p className="text-[10px] tracking-[0.22em] uppercase text-[#999] mt-3 font-medium">
             Adicione produtos para visualizar as análises
           </p>
         </div>
@@ -336,7 +336,7 @@ const PrecificacaoTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdut
                 <thead>
                   <tr style={{ borderBottom: BORDER_STRONG }}>
                     {['Produto', 'Custo', 'Meta Venda', 'Lucro / un', 'Margem', 'Markup', ''].map(h => (
-                      <th key={h} className="text-left text-[9px] tracking-[0.22em] uppercase text-[#444] font-medium pb-3 pr-5">{h}</th>
+                      <th key={h} className="text-left text-[9px] tracking-[0.22em] uppercase text-[#888] font-medium pb-3 pr-5">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -370,15 +370,15 @@ const PrecificacaoTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdut
                             placeholder="—"
                           />
                         </td>
-                        <td className="py-3 pr-5 font-mono text-sm text-[#444]" colSpan={3}>
-                          {editError && <span className="text-[11px] text-[#666] tracking-wide">{editError}</span>}
+                        <td className="py-3 pr-5 font-mono text-sm text-[#888]" colSpan={3}>
+                          {editError && <span className="text-[11px] text-[#aaa] tracking-wide">{editError}</span>}
                         </td>
                         <td className="py-3">
                           <div className="flex items-center gap-2">
-                            <button onClick={saveEdit} className="text-[#555] hover:text-[#aaa] transition-colors p-1">
+                            <button onClick={saveEdit} className="text-[#999] hover:text-[#aaa] transition-colors p-1">
                               <Check size={13} strokeWidth={2} />
                             </button>
-                            <button onClick={cancelEdit} className="text-[#333] hover:text-[#666] transition-colors p-1">
+                            <button onClick={cancelEdit} className="text-[#aaa] hover:text-[#aaa] transition-colors p-1">
                               <X size={13} strokeWidth={2} />
                             </button>
                           </div>
@@ -391,39 +391,39 @@ const PrecificacaoTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdut
                         <span style={{ fontFamily: 'Poppins, sans-serif', fontSize: '0.82rem', fontWeight: 300, letterSpacing: '0.14em' }}
                           className="text-[#c8c8c8] uppercase">{p.nome}</span>
                       </td>
-                      <td className="py-4 pr-5 font-mono text-sm text-[#555] font-medium">{fmt(p.precoCusto)}</td>
+                      <td className="py-4 pr-5 font-mono text-sm text-[#999] font-medium">{fmt(p.precoCusto)}</td>
 
-                      <td className="py-4 pr-5 font-mono text-sm text-[#666] font-medium">
-                        {p.metaVenda !== null ? fmt(p.metaVenda) : <span className="text-[#2a2a2a]">—</span>}
+                      <td className="py-4 pr-5 font-mono text-sm text-[#aaa] font-medium">
+                        {p.metaVenda !== null ? fmt(p.metaVenda) : <span className="text-[#999]">—</span>}
                       </td>
 
                       <td className="py-4 pr-5 font-mono text-sm text-[#e0e0e0] font-medium">
                         {p.lucroReal !== null
                           ? fmt(p.lucroReal)
                           : p.lucroPlanejado !== null
-                            ? <span className="text-[#666]">{fmt(p.lucroPlanejado)}</span>
-                            : <span className="text-[#2a2a2a]">—</span>}
+                            ? <span className="text-[#aaa]">{fmt(p.lucroPlanejado)}</span>
+                            : <span className="text-[#999]">—</span>}
                       </td>
                       <td className="py-4 pr-5 font-mono text-sm text-[#888] font-medium">
                         {p.margemReal !== null
                           ? pct(p.margemReal)
                           : p.margemPlanejada !== null
-                            ? <span className="text-[#555]">{pct(p.margemPlanejada)}</span>
-                            : <span className="text-[#2a2a2a]">—</span>}
+                            ? <span className="text-[#999]">{pct(p.margemPlanejada)}</span>
+                            : <span className="text-[#999]">—</span>}
                       </td>
-                      <td className="py-4 pr-5 font-mono text-sm text-[#666] font-medium">
+                      <td className="py-4 pr-5 font-mono text-sm text-[#aaa] font-medium">
                         {p.markupReal !== null
                           ? pct(p.markupReal)
                           : p.markupPlanejado !== null
-                            ? <span className="text-[#444]">{pct(p.markupPlanejado)}</span>
-                            : <span className="text-[#2a2a2a]">—</span>}
+                            ? <span className="text-[#888]">{pct(p.markupPlanejado)}</span>
+                            : <span className="text-[#999]">—</span>}
                       </td>
                       <td className="py-4">
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => startEdit(p)} className="text-[#333] hover:text-[#888] transition-colors p-1">
+                          <button onClick={() => startEdit(p)} className="text-[#aaa] hover:text-[#888] transition-colors p-1">
                             <Pencil size={13} strokeWidth={2} />
                           </button>
-                          <button onClick={() => remove(p.id)} className="text-[#333] hover:text-[#888] transition-colors p-1">
+                          <button onClick={() => remove(p.id)} className="text-[#aaa] hover:text-[#888] transition-colors p-1">
                             <Trash2 size={13} strokeWidth={2} />
                           </button>
                         </div>

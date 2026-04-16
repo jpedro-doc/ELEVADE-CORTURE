@@ -38,7 +38,7 @@ const Index: React.FC = () => {
             </h1>
             <span
               style={{ fontFamily: 'Poppins, sans-serif', fontSize: '0.85rem', fontWeight: 200, letterSpacing: '0.4em' }}
-              className="text-[#555]"
+              className="text-[#888]"
             >
               CORTURE
             </span>
@@ -49,10 +49,10 @@ const Index: React.FC = () => {
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                style={{ borderBottom: tab === t.id ? '1px solid #666' : '1px solid transparent' }}
+                style={{ borderBottom: tab === t.id ? '1px solid #888' : '1px solid transparent' }}
                 className={[
                   'px-4 py-1.5 text-[10px] tracking-[0.22em] uppercase font-medium transition-colors',
-                  tab === t.id ? 'text-[#e0e0e0]' : 'text-[#444] hover:text-[#888]',
+                  tab === t.id ? 'text-[#e0e0e0]' : 'text-[#666] hover:text-[#bbb]',
                 ].join(' ')}
               >
                 {t.label}

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Trash2, Plus, ShoppingBag, TrendingUp, DollarSign, Package } from 'lucide-react';
 import { fetchVendas, createVenda, deleteVenda, type Venda } from '@/services/vendasService';
-import { createProduto, updateProduto, type Produto } from '@/services/produtoService';
+import { deleteProduto, type Produto } from '@/services/produtoService';
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 
@@ -36,12 +36,12 @@ const MANUAL_ID = '__manual__';
 const BORDER        = '1px solid #2a2a2a';
 const BORDER_STRONG = '1px solid #3a3a3a';
 
-const labelCls = 'block text-[10px] tracking-[0.2em] uppercase text-[#666] mb-2 font-medium';
+const labelCls = 'block text-[10px] tracking-[0.2em] uppercase text-[#aaa] mb-2 font-medium';
 
 const inputCls = [
   'w-full bg-[#0c0c0c] border border-[#2a2a2a] px-4 py-3',
   'text-sm text-[#e8e8e8] font-medium tracking-wide',
-  'placeholder:text-[#2a2a2a] focus:border-[#666] focus:outline-none transition-colors',
+  'placeholder:text-[#999] focus:border-[#666] focus:outline-none transition-colors',
 ].join(' ');
 
 const selectCls = [
@@ -55,19 +55,19 @@ const selectCls = [
 const KpiCard: React.FC<{ label: string; value: string; sub?: string; icon?: React.ReactNode }> = ({ label: l, value, sub, icon }) => (
   <div style={{ border: BORDER }} className="p-5 bg-[#070707]">
     <div className="flex items-start justify-between mb-3">
-      <p className="text-[9px] tracking-[0.28em] uppercase text-[#444] font-medium">{l}</p>
-      {icon && <span className="text-[#252525]">{icon}</span>}
+      <p className="text-[9px] tracking-[0.28em] uppercase text-[#888] font-medium">{l}</p>
+      {icon && <span className="text-[#999]">{icon}</span>}
     </div>
     <p style={{ fontFamily: 'Poppins, sans-serif', fontSize: '1.5rem', fontWeight: 200, letterSpacing: '0.04em', lineHeight: 1 }}
       className="text-[#e0e0e0] mb-2">{value}</p>
-    {sub && <p className="text-[10px] text-[#3a3a3a] font-medium tracking-[0.12em] mt-2 uppercase">{sub}</p>}
+    {sub && <p className="text-[10px] text-[#aaa] font-medium tracking-[0.12em] mt-2 uppercase">{sub}</p>}
   </div>
 );
 
 /* ─── Period Header ──────────────────────────────────────────────────────── */
 
 const PeriodHeader: React.FC<{ title: string }> = ({ title }) => (
-  <p className="text-[9px] tracking-[0.28em] uppercase text-[#444] font-medium mb-3">{title}</p>
+  <p className="text-[9px] tracking-[0.28em] uppercase text-[#888] font-medium mb-3">{title}</p>
 );
 
 /* ─── Main ───────────────────────────────────────────────────────────────── */
@@ -125,14 +125,7 @@ const VendasTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) 
 
     setError('');
     try {
-      let idFinal = (produtoId && produtoId !== MANUAL_ID) ? produtoId : null;
-
-      // Produto não cadastrado: cria no catálogo automaticamente
-      if (isManual) {
-        const novoProduto = await createProduto({ nome, precoCusto: pc, metaVenda: null, precoVenda: pv });
-        idFinal = novoProduto.id;
-        setProdutos(prev => [novoProduto, ...prev]);
-      }
+      const idFinal = isManual ? null : produtoId;
 
       const nova = await createVenda({
         produto_id:   idFinal,
@@ -142,6 +135,13 @@ const VendasTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) 
         preco_custo:  pc,
       });
       setVendas(prev => [nova, ...prev]);
+
+      // Remove do estoque após vender
+      if (!isManual && produtoId) {
+        await deleteProduto(produtoId);
+        setProdutos(prev => prev.filter(p => p.id !== produtoId));
+      }
+
       setProdutoId(''); setNomeManual(''); setQuantidade('1'); setPrecoVenda(''); setPrecoCusto('');
     } catch {
       setError('Erro ao registrar venda. Verifique a conexão.');
@@ -149,16 +149,9 @@ const VendasTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) 
   };
 
   const remove = async (id: string) => {
-    const venda = vendas.find(v => v.id === id);
     try {
-      await Promise.all([
-        deleteVenda(id),
-        venda?.produto_id ? updateProduto(venda.produto_id, { precoVenda: null }) : Promise.resolve(),
-      ]);
+      await deleteVenda(id);
       setVendas(prev => prev.filter(v => v.id !== id));
-      if (venda?.produto_id) {
-        setProdutos(prev => prev.map(p => p.id === venda.produto_id ? { ...p, precoVenda: null } : p));
-      }
     } catch {
       setError('Erro ao remover venda.');
     }
@@ -191,14 +184,14 @@ const VendasTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) 
 
   if (loading || loadingProdutos) return (
     <div className="max-w-6xl mx-auto py-24 text-center">
-      <p className="text-[10px] tracking-[0.3em] uppercase text-[#333] font-medium">Carregando...</p>
+      <p className="text-[10px] tracking-[0.3em] uppercase text-[#aaa] font-medium">Carregando...</p>
     </div>
   );
 
   if (dbError) return (
     <div className="max-w-6xl mx-auto py-24 text-center space-y-3">
-      <p className="text-[10px] tracking-[0.3em] uppercase text-[#666] font-medium">Erro de conexão com o banco</p>
-      <p className="font-mono text-xs text-[#444] max-w-lg mx-auto break-words">{dbError}</p>
+      <p className="text-[10px] tracking-[0.3em] uppercase text-[#aaa] font-medium">Erro de conexão com o banco</p>
+      <p className="font-mono text-xs text-[#888] max-w-lg mx-auto break-words">{dbError}</p>
     </div>
   );
 
@@ -211,10 +204,10 @@ const VendasTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) 
       <section style={{ borderBottom: BORDER_STRONG }} className="mb-14 pb-14">
         <div className="flex items-end justify-between mb-8">
           <h2 style={{ fontFamily: 'Poppins, sans-serif', fontSize: '0.65rem', fontWeight: 500, letterSpacing: '0.32em' }}
-            className="text-[#555] uppercase">
+            className="text-[#999] uppercase">
             Registrar Venda
           </h2>
-          <span className="text-[10px] tracking-[0.22em] uppercase text-[#444] font-medium">
+          <span className="text-[10px] tracking-[0.22em] uppercase text-[#888] font-medium">
             {vendas.length} {vendas.length === 1 ? 'venda registrada' : 'vendas registradas'}
           </span>
         </div>
@@ -259,7 +252,7 @@ const VendasTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) 
             <label className={labelCls}>
               Preço de Venda — R$
               {produtoSelecionado && (
-                <span className="text-[#333] normal-case tracking-normal ml-1">(auto)</span>
+                <span className="text-[#aaa] normal-case tracking-normal ml-1">(auto)</span>
               )}
             </label>
             <input className={inputCls} type="number" min="0" step="0.01"
@@ -272,7 +265,7 @@ const VendasTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) 
             <label className={labelCls}>
               Custo — R$
               {produtoSelecionado && (
-                <span className="text-[#333] normal-case tracking-normal ml-1">(auto)</span>
+                <span className="text-[#aaa] normal-case tracking-normal ml-1">(auto)</span>
               )}
             </label>
             <input className={inputCls} type="number" min="0" step="0.01"
@@ -283,12 +276,12 @@ const VendasTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) 
           {/* Preview lucro */}
           {precoVenda && precoCusto && parseFloat(precoVenda) > 0 && parseFloat(precoCusto) > 0 && (
             <div style={{ border: BORDER }} className="p-4 bg-[#070707] flex flex-col justify-center">
-              <p className="text-[9px] tracking-[0.22em] uppercase text-[#444] font-medium mb-2">Lucro desta venda</p>
+              <p className="text-[9px] tracking-[0.22em] uppercase text-[#888] font-medium mb-2">Lucro desta venda</p>
               <p style={{ fontFamily: 'Poppins, sans-serif', fontSize: '1.2rem', fontWeight: 200 }}
                 className="text-[#e0e0e0]">
                 {fmt((parseFloat(precoVenda) - parseFloat(precoCusto)) * parseInt(quantidade || '1'))}
               </p>
-              <p className="text-[10px] text-[#3a3a3a] mt-1 font-medium">
+              <p className="text-[10px] text-[#aaa] mt-1 font-medium">
                 {parseInt(quantidade || '1')} × {fmt(parseFloat(precoVenda) - parseFloat(precoCusto))} / un
               </p>
             </div>
@@ -305,7 +298,7 @@ const VendasTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) 
         </button>
 
         {error && (
-          <p style={{ borderLeft: '2px solid #3a3a3a' }} className="text-[11px] tracking-[0.1em] text-[#666] pl-4 py-1 font-medium mt-4">
+          <p style={{ borderLeft: '2px solid #3a3a3a' }} className="text-[11px] tracking-[0.1em] text-[#aaa] pl-4 py-1 font-medium mt-4">
             {error}
           </p>
         )}
@@ -315,7 +308,7 @@ const VendasTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) 
       <section className="mb-14">
         <div style={{ borderBottom: BORDER_STRONG }} className="mb-8 pb-4">
           <h3 style={{ fontFamily: 'Poppins, sans-serif', fontSize: '1.1rem', fontWeight: 200, letterSpacing: '0.2em' }}
-            className="text-[#c0c0c0] uppercase">Análise de Vendas</h3>
+            className="text-[#d8d8d8] uppercase">Análise de Vendas</h3>
         </div>
 
         {/* Hoje */}
@@ -371,16 +364,16 @@ const VendasTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) 
       <section>
         <div style={{ borderBottom: BORDER_STRONG }} className="mb-8 pb-4">
           <h3 style={{ fontFamily: 'Poppins, sans-serif', fontSize: '1.1rem', fontWeight: 200, letterSpacing: '0.2em' }}
-            className="text-[#c0c0c0] uppercase">Histórico</h3>
+            className="text-[#d8d8d8] uppercase">Histórico</h3>
         </div>
 
         {vendas.length === 0 ? (
           <div style={{ border: BORDER }} className="py-24 text-center">
             <p style={{ fontFamily: 'Poppins, sans-serif', fontSize: '1.5rem', fontWeight: 400, letterSpacing: '0.1em' }}
-              className="text-[#2a2a2a] italic">
+              className="text-[#999] italic">
               Nenhuma venda registrada
             </p>
-            <p className="text-[10px] tracking-[0.22em] uppercase text-[#2a2a2a] mt-3 font-medium">
+            <p className="text-[10px] tracking-[0.22em] uppercase text-[#999] mt-3 font-medium">
               Registre a primeira venda acima
             </p>
           </div>
@@ -390,7 +383,7 @@ const VendasTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) 
               <thead>
                 <tr style={{ borderBottom: BORDER_STRONG }}>
                   {['Data', 'Produto', 'Qtd', 'Preço / un', 'Total', 'Lucro', ''].map(h => (
-                    <th key={h} className="text-left text-[9px] tracking-[0.22em] uppercase text-[#444] font-medium pb-3 pr-5">{h}</th>
+                    <th key={h} className="text-left text-[9px] tracking-[0.22em] uppercase text-[#888] font-medium pb-3 pr-5">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -400,17 +393,17 @@ const VendasTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) 
                   const lucro = (v.preco_venda - v.preco_custo) * v.quantidade;
                   return (
                     <tr key={v.id} style={{ borderBottom: BORDER }} className="group hover:bg-[#0d0d0d] transition-colors">
-                      <td className="py-4 pr-5 font-mono text-xs text-[#444] font-medium whitespace-nowrap">
+                      <td className="py-4 pr-5 font-mono text-xs text-[#888] font-medium whitespace-nowrap">
                         {fmtDataHora(v.created_at)}
                       </td>
                       <td className="py-4 pr-5">
                         <span style={{ fontFamily: 'Poppins, sans-serif', fontSize: '0.82rem', fontWeight: 300, letterSpacing: '0.14em' }}
                           className="text-[#c8c8c8] uppercase">{v.produto_nome}</span>
                       </td>
-                      <td className="py-4 pr-5 font-mono text-sm text-[#555] font-medium text-center">
+                      <td className="py-4 pr-5 font-mono text-sm text-[#999] font-medium text-center">
                         {v.quantidade}
                       </td>
-                      <td className="py-4 pr-5 font-mono text-sm text-[#555] font-medium">
+                      <td className="py-4 pr-5 font-mono text-sm text-[#999] font-medium">
                         {fmt(v.preco_venda)}
                       </td>
                       <td className="py-4 pr-5 font-mono text-sm text-[#aaa] font-medium">
@@ -421,7 +414,7 @@ const VendasTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) 
                       </td>
                       <td className="py-4">
                         <button onClick={() => remove(v.id)}
-                          className="opacity-30 hover:opacity-100 transition-opacity text-[#666] hover:text-[#e8e8e8] p-1">
+                          className="opacity-30 hover:opacity-100 transition-opacity text-[#aaa] hover:text-[#e8e8e8] p-1">
                           <Trash2 size={13} strokeWidth={2} />
                         </button>
                       </td>
