@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import PrecificacaoTab from '@/components/PrecificacaoTab';
 import VendasTab from '@/components/VendasTab';
+import EstoqueTab from '@/components/EstoqueTab';
 import { fetchProdutos, type Produto } from '@/services/produtoService';
 
-type Tab = 'precificacao' | 'vendas';
+type Tab = 'precificacao' | 'vendas' | 'estoque';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'precificacao', label: 'Precificação' },
   { id: 'vendas',       label: 'Vendas'       },
+  { id: 'estoque',      label: 'Estoque'      },
 ];
 
 const BORDER = '1px solid #2a2a2a';
@@ -81,6 +83,12 @@ const Index: React.FC = () => {
               <VendasTab
                 produtos={produtos}
                 setProdutos={setProdutos}
+                loadingProdutos={loadingProdutos}
+              />
+            )}
+            {tab === 'estoque' && (
+              <EstoqueTab
+                produtos={produtos}
                 loadingProdutos={loadingProdutos}
               />
             )}

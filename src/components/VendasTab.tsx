@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Trash2, Plus, ShoppingBag, TrendingUp, DollarSign, Package } from 'lucide-react';
 import { fetchVendas, createVenda, deleteVenda, type Venda } from '@/services/vendasService';
-import { deleteProduto, type Produto } from '@/services/produtoService';
+import { updateProduto, type Produto } from '@/services/produtoService';
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 
@@ -136,10 +136,10 @@ const VendasTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) 
       });
       setVendas(prev => [nova, ...prev]);
 
-      // Remove do estoque após vender
+      // Marca como fora de estoque após vender
       if (!isManual && produtoId) {
-        await deleteProduto(produtoId);
-        setProdutos(prev => prev.filter(p => p.id !== produtoId));
+        await updateProduto(produtoId, { emEstoque: false });
+        setProdutos(prev => prev.map(p => p.id === produtoId ? { ...p, emEstoque: false } : p));
       }
 
       setProdutoId(''); setNomeManual(''); setQuantidade('1'); setPrecoVenda(''); setPrecoCusto('');
@@ -149,9 +149,14 @@ const VendasTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) 
   };
 
   const remove = async (id: string) => {
+    const venda = vendas.find(v => v.id === id);
     try {
       await deleteVenda(id);
       setVendas(prev => prev.filter(v => v.id !== id));
+      if (venda?.produto_id) {
+        await updateProduto(venda.produto_id, { emEstoque: true });
+        setProdutos(prev => prev.map(p => p.id === venda.produto_id ? { ...p, emEstoque: true } : p));
+      }
     } catch {
       setError('Erro ao remover venda.');
     }
@@ -216,14 +221,14 @@ const VendasTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdutos }) 
           {/* Produto */}
           <div className="lg:col-span-2">
             <label className={labelCls}>Produto</label>
-            {produtos.length > 0 ? (
+            {produtos.some(p => p.emEstoque) ? (
               <select
                 className={selectCls}
                 value={produtoId}
                 onChange={e => handleSelectProduto(e.target.value)}
               >
                 <option value="">— selecionar produto —</option>
-                {produtos.map(p => (
+                {produtos.filter(p => p.emEstoque).map(p => (
                   <option key={p.id} value={p.id}>{p.nome}</option>
                 ))}
                 <option value="__manual__">Outro (digitar nome)</option>

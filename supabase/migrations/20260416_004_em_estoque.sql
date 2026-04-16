@@ -1,0 +1,2 @@
+ALTER TABLE public.produtos
+  ADD COLUMN IF NOT EXISTS em_estoque BOOLEAN NOT NULL DEFAULT true;
