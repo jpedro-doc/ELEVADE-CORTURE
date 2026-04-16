@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Trash2, Plus, TrendingUp, Target, DollarSign, BarChart2, Pencil, Check, X, PackagePlus } from 'lucide-react';
+import { Trash2, Plus, TrendingUp, Target, DollarSign, BarChart2, Pencil, Check, X } from 'lucide-react';
 import {
   createProduto, deleteProduto, updateProduto,
   fetchMetaMensal, saveMetaMensal,
@@ -432,10 +432,10 @@ const PrecificacaoTab: React.FC<Props> = ({ produtos, setProdutos, loadingProdut
                           {!p.emEstoque && (
                             <button
                               onClick={() => addToEstoque(p.id)}
-                              title="Adicionar ao estoque"
-                              className="opacity-40 hover:opacity-100 transition-opacity text-[#888] hover:text-[#e0e0e0] p-1"
+                              style={{ border: '1px solid #3a3a3a' }}
+                              className="px-2 py-1 text-[9px] tracking-[0.18em] uppercase text-[#bbb] hover:border-[#666] hover:text-[#e0e0e0] transition-all font-medium whitespace-nowrap"
                             >
-                              <PackagePlus size={13} strokeWidth={2} />
+                              + estoque
                             </button>
                           )}
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
